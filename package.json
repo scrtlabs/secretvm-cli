@@ -1,0 +1,36 @@
+{
+  "name": "secretai-devportal-cli",
+  "version": "0.1.0",
+  "description": "SecretAI devportal cli",
+  "main": "dist/cli.js",
+  "bin": {
+    "secretai-devportal-cli": "./dist/cli.js"
+  },
+  "scripts": {
+    "start": "node dist/cli.js",
+    "build": "tsc",
+    "dev": "ts-node src/cli.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.x.x",
+    "axios-cookiejar-support": "^5.x.x",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.x.x",
+    "inquirer": "^8.x.x",
+    "tough-cookie": "^4.x.x"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^8.x.x",
+    "@types/node": "^20.x.x",
+    "@types/tough-cookie": "^4.x.x",
+    "ts-node": "^10.x.x",
+    "typescript": "^5.x.x"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
