@@ -52,3 +52,25 @@ export interface VmInstance {
 }
 
 export type CreateVmApiResponse = VmInstance;
+
+export interface StopVmApiResponse {
+    status: string;
+    message?: string;
+    data?: any;
+}
+
+export interface RemoveVmApiResponse {
+    status: string;
+    message?: string;
+    details?: any;
+}
+
+export interface StartVmApiResponse {
+    status: string;
+    message?: string;
+    data?: {
+        vm_name?: string;
+        ip_address?: string;
+        [key: string]: any;
+    };
+}

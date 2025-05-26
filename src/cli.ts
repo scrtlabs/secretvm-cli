@@ -9,6 +9,9 @@ import {
     createVmCommand,
     vmLogsCommand,
     vmAttestationCommand,
+    stopVmCommand,
+    startVmCommand,
+    removeVmCommand,
 } from "./commands";
 
 async function main() {
@@ -45,6 +48,27 @@ async function main() {
         .command("create")
         .description("Create new virtual machine")
         .action(createVmCommand);
+    vmCommands
+        .command("stop")
+        .argument("<vmId>")
+        .description("Stop virtual machine")
+        .action((vmId: string) => {
+            stopVmCommand(vmId);
+        });
+    vmCommands
+        .command("start")
+        .argument("<vmId>")
+        .description("Start virtual machine")
+        .action((vmId: string) => {
+            startVmCommand(vmId);
+        });
+    vmCommands
+        .command("remove")
+        .argument("<vmId>")
+        .description("Remove virtual machine")
+        .action((vmId: string) => {
+            removeVmCommand(vmId);
+        });
     vmCommands
         .command("logs")
         .description("View logs of the specified virtual machine")
