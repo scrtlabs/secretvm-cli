@@ -26,11 +26,11 @@ yarn install
 ```bash
 npm run build
 ```
-This will create a dist directory with the compiled code.
+This will create a `/dist` directory with the compiled code.
 
 4. Make the CLI Globally Available (Optional)
 To use the CLI command from anywhere on your system, you can link it:
 ```
 npm link
 ```
-This will make the command secretai-devportal-cliavailable globally. Alternatively, you can run it directly using node dist/cli.js
+This will make the command `secretai-devportal-cli` available globally. Alternatively, you can run it directly using `node dist/cli.js`
