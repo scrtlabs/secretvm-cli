@@ -14,6 +14,7 @@ export async function listVmsCommand(): Promise<void> {
             var table = new Table({
                 head: [
                     "ID",
+                    "UUID",
                     "Name",
                     "Status",
                     "Type",
@@ -26,6 +27,7 @@ export async function listVmsCommand(): Promise<void> {
             vms.forEach((vm) => {
                 table.push([
                     vm.vmId,
+                    vm.id,
                     vm.nameFromUser,
                     vm.status,
                     vm.vmTypeId,

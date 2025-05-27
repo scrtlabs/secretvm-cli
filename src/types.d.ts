@@ -1,16 +1,22 @@
 export interface VmTypeInfo {
+    id: string;
     type: string;
     cpu: number;
     ram: number;
     disk: number;
     traffic: number;
     pricePerHour: number;
-    price?: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface HostInfo {
-    host: string;
+    id: string;
     port: number;
+    host: string;
+    name: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface CsrfResponse {
@@ -73,4 +79,30 @@ export interface StartVmApiResponse {
         ip_address?: string;
         [key: string]: any;
     };
+}
+
+export interface VmDetailsApiResponse {
+    id: string;
+    vmId: string;
+    name: string;
+    nameFromUser: string | null;
+    state: string;
+    status: string;
+    user: string;
+    vmTypeId: string;
+    hostId: string;
+    memory: number;
+    vcpus: number;
+    disk_size: number;
+    created_at: string;
+    updated_at: string;
+    ip_address: string | null;
+    vmDomain: string | null;
+    gateway: string | null;
+    network_bridge: string | null;
+    network_is_tap: boolean | null;
+    network_ports: any;
+    docker_file: string | null;
+    vmType: VmTypeInfo;
+    host: HostInfo;
 }

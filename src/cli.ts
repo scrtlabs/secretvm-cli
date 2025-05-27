@@ -12,6 +12,7 @@ import {
     stopVmCommand,
     startVmCommand,
     removeVmCommand,
+    vmStatusCommand,
 } from "./commands";
 
 async function main() {
@@ -82,6 +83,13 @@ async function main() {
         .argument("<vmId>")
         .action((vmId: string) => {
             vmAttestationCommand(vmId);
+        });
+    vmCommands
+        .command("status")
+        .description("View virtual machine status")
+        .argument("<vmUUID>")
+        .action((vmId: string) => {
+            vmStatusCommand(vmId);
         });
     program.addCommand(vmCommands);
 
