@@ -14,6 +14,7 @@ import {
     removeVmCommand,
     vmStatusCommand,
 } from "./commands";
+import { GlobalOptions } from "./types";
 
 async function main() {
     const program = new Command();
@@ -21,75 +22,99 @@ async function main() {
     program
         .name("secretai-devportal-cli")
         .description("CLI tool for SecretAI devportal")
-        .version("0.1.0");
+        .version("0.1.0")
+        .option(
+            "-i, --interactive",
+            "Enable interactive mode with prompts and human-readable output",
+            false,
+        );
 
     const authCommands = new Command("auth").description("Auth commands");
     authCommands
         .command("login")
         .description("Login to the service using Keplr wallet")
-        .action(loginCommand);
+        .option("-w, --wallet-address <address>", "Keplr wallet address")
+        .action(async (cmdOptions) => {
+            await loginCommand(cmdOptions, program.opts() as GlobalOptions);
+        });
     authCommands
         .command("logout")
         .description("Logout from the service and clear session")
-        .action(logoutCommand);
+        .action(async () => {
+            await logoutCommand(program.opts() as GlobalOptions);
+        });
     program.addCommand(authCommands);
 
     program
         .command("status")
         .description("Check current login status")
-        .action(statusCommand);
+        .action(async () => {
+            await statusCommand(program.opts() as GlobalOptions);
+        });
 
     const vmCommands = new Command("vm").description("VM commands");
     vmCommands
         .command("list")
         .alias("ls")
         .description("List all virtual machine instances")
-        .action(listVmsCommand);
+        .action(async () => {
+            await listVmsCommand(program.opts() as GlobalOptions);
+        });
     vmCommands
         .command("create")
         .description("Create new virtual machine")
-        .action(createVmCommand);
+        .option("-n, --name <vmName>", "VM name")
+        .option("-t, --type <vmType>", "VM type (small, medium, large)")
+        .option(
+            "-d, --docker-compose <dockerComposePath>",
+            "Path to docker-compose.yaml",
+        )
+        .option("-c, --invite-code <inviteCode>", "Invite code (optional)")
+        .action(async (cmdOptions) => {
+            console.log(cmdOptions);
+            await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
+        });
     vmCommands
         .command("stop")
         .argument("<vmId>")
         .description("Stop virtual machine")
-        .action((vmId: string) => {
-            stopVmCommand(vmId);
+        .action(async (vmId: string) => {
+            await stopVmCommand(vmId, program.opts() as GlobalOptions);
         });
     vmCommands
         .command("start")
         .argument("<vmId>")
         .description("Start virtual machine")
-        .action((vmId: string) => {
-            startVmCommand(vmId);
+        .action(async (vmId: string) => {
+            await startVmCommand(vmId, program.opts() as GlobalOptions);
         });
     vmCommands
         .command("remove")
         .argument("<vmId>")
         .description("Remove virtual machine")
-        .action((vmId: string) => {
-            removeVmCommand(vmId);
+        .action(async (vmId: string) => {
+            await removeVmCommand(vmId, program.opts() as GlobalOptions);
         });
     vmCommands
         .command("logs")
         .description("View logs of the specified virtual machine")
         .argument("<vmId>")
-        .action((vmId: string) => {
-            vmLogsCommand(vmId);
+        .action(async (vmId: string) => {
+            await vmLogsCommand(vmId, program.opts() as GlobalOptions);
         });
     vmCommands
         .command("attestation")
         .description("View CPU attestation of the specified virtual machine")
         .argument("<vmId>")
-        .action((vmId: string) => {
-            vmAttestationCommand(vmId);
+        .action(async (vmId: string) => {
+            await vmAttestationCommand(vmId, program.opts() as GlobalOptions);
         });
     vmCommands
         .command("status")
         .description("View virtual machine status")
         .argument("<vmUUID>")
-        .action((vmId: string) => {
-            vmStatusCommand(vmId);
+        .action(async (vmId: string) => {
+            await vmStatusCommand(vmId, program.opts() as GlobalOptions);
         });
     program.addCommand(vmCommands);
 

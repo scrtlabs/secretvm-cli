@@ -1,10 +1,18 @@
 import axios from "axios";
 import { getApiClient } from "../../services/apiClient";
-import { StopVmApiResponse } from "../../types";
+import { StopVmApiResponse, GlobalOptions } from "../../types";
+import { successResponse, errorResponse } from "../../utils";
 
-export async function stopVmCommand(vmId: string): Promise<void> {
+export async function stopVmCommand(
+    vmId: string,
+    globalOptions: GlobalOptions,
+): Promise<void> {
     if (!vmId || vmId.trim() === "") {
-        console.error("Error: VM ID is required.");
+        if (globalOptions.interactive) {
+            console.error("Error: VM ID is required.");
+        } else {
+            errorResponse("VM ID is required");
+        }
         return;
     }
 
@@ -14,52 +22,58 @@ export async function stopVmCommand(vmId: string): Promise<void> {
         const apiClient = await getApiClient();
         const endpointPath = `/api/vm/${trimmedVmId}/stop`;
 
-        console.log(
-            `Sending stop request to: ${apiClient.defaults.baseURL}${endpointPath}`,
-        );
-
         const response = await apiClient.post<StopVmApiResponse>(endpointPath);
 
-        if (response.data) {
-            console.log("\nVM stop request processed.");
-            console.log("------------------------------------------");
-            console.log(`Response Status: ${response.data.status || "N/A"}`);
-            if (response.data.message) {
-                console.log(`Message: ${response.data.message}`);
-            }
-            console.log("------------------------------------------");
-            console.log(
-                `VM ID "${trimmedVmId}" is being stopped. Use "list-vms" to check its status.`,
-            );
-        } else {
-            console.log(
-                "VM stop request processed, but the response was empty or in an unexpected format.",
-            );
-        }
-    } catch (error: any) {
-        if (axios.isAxiosError(error)) {
-            if (error.response?.status === 401) {
-                console.error(
-                    'Error: Unauthorized. Please login first using the "login" command.',
+        if (globalOptions.interactive) {
+            if (response.data) {
+                console.log("\nVM stop request processed.");
+                console.log("------------------------------------------");
+                console.log(
+                    `Response Status: ${response.data.status || "N/A"}`,
                 );
-            } else if (error.response?.status === 404) {
-                console.error(
-                    `Error: VM ID "${trimmedVmId}" not found or you are not authorized to perform this action.`,
+                if (response.data.message) {
+                    console.log(`Message: ${response.data.message}`);
+                }
+                console.log("------------------------------------------");
+                console.log(
+                    `VM ID "${trimmedVmId}" is being stopped. Use "list-vms" to check its status.`,
                 );
             } else {
-                const errorMsg =
-                    error.response?.data?.message ||
-                    error.response?.data ||
-                    error.message;
-                console.error(
-                    `Error stopping VM (HTTP ${error.response?.status}): ${errorMsg}`,
+                console.log(
+                    "VM stop request processed, but the response was empty or in an unexpected format.",
                 );
             }
         } else {
-            console.error(
-                "An unexpected error occurred during the VM stop operation:",
-                error.message || error,
-            );
+            successResponse(response.data);
+        }
+    } catch (error: any) {
+        if (globalOptions.interactive) {
+            if (axios.isAxiosError(error)) {
+                if (error.response?.status === 401) {
+                    console.error(
+                        'Error: Unauthorized. Please login first using the "login" command.',
+                    );
+                } else if (error.response?.status === 404) {
+                    console.error(
+                        `Error: VM ID "${trimmedVmId}" not found or you are not authorized to perform this action.`,
+                    );
+                } else {
+                    const errorMsg =
+                        error.response?.data?.message ||
+                        error.response?.data ||
+                        error.message;
+                    console.error(
+                        `Error stopping VM (HTTP ${error.response?.status}): ${errorMsg}`,
+                    );
+                }
+            } else {
+                console.error(
+                    "An unexpected error occurred during the VM stop operation:",
+                    error.message || error,
+                );
+            }
+        } else {
+            errorResponse(error);
         }
     }
 }

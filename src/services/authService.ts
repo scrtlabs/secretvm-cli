@@ -59,9 +59,6 @@ export async function loginWithKeplr(
                 error.response?.status === 302 &&
                 error.response?.headers.location
             ) {
-                console.log(
-                    `Login redirected to ${error.response.headers.location}. This is often a sign of successful authentication.`,
-                );
                 return { url: error.response.headers.location };
             }
         } else {

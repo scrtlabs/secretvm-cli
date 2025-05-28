@@ -40,7 +40,6 @@ export async function saveSession(jar: CookieJar): Promise<void> {
             await fs.chmod(SESSION_FILE, 0o600);
         }
         currentJar = jar; // Update current jar in memory
-        console.log(`Session saved to ${SESSION_FILE}`);
     } catch (error) {
         console.error("Error saving session:", error);
     }
@@ -54,7 +53,6 @@ export async function loadSession(): Promise<CookieJar | null> {
         const fileContent = await fs.readFile(SESSION_FILE, "utf-8");
         const serializedJar = JSON.parse(fileContent);
         currentJar = CookieJar.deserializeSync(serializedJar);
-        console.log("Session loaded from file.");
         return currentJar;
     } catch (error: any) {
         // It's normal if the file doesn't exist on first run or after logout
@@ -72,11 +70,8 @@ export async function clearSession(): Promise<void> {
     try {
         await fs.unlink(SESSION_FILE);
         currentJar = null; // Clear in-memory jar
-        console.log("Session cleared.");
     } catch (error: any) {
-        if (error.code === "ENOENT") {
-            console.log("No active session to clear.");
-        } else {
+        if (error.code !== "ENOENT") {
             console.error("Error clearing session:", error);
         }
     }

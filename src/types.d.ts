@@ -106,3 +106,18 @@ export interface VmDetailsApiResponse {
     vmType: VmTypeInfo;
     host: HostInfo;
 }
+
+export interface GlobalOptions {
+    interactive: boolean;
+}
+
+export interface LoginCommandOptions {
+    walletAddress?: string;
+}
+
+export interface CreateVmCommandOptions {
+    name?: string;
+    type?: string;
+    dockerCompose?: string;
+    inviteCode?: string;
+}

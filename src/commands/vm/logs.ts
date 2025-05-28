@@ -1,7 +1,12 @@
 import { getApiClient } from "../../services/apiClient";
 import axios from "axios";
+import { GlobalOptions } from "../../types";
+import { successResponse, errorResponse } from "../../utils";
 
-export async function vmLogsCommand(vmId: string): Promise<void> {
+export async function vmLogsCommand(
+    vmId: string,
+    globalOptions: GlobalOptions,
+): Promise<void> {
     const apiClient = await getApiClient();
 
     try {
@@ -9,27 +14,34 @@ export async function vmLogsCommand(vmId: string): Promise<void> {
             `/api/vm/${vmId}/docker_logs`,
         );
         const logs = response.data;
-
-        if (logs) {
-            console.log(logs);
-        } else {
-            console.log("Received an unexpected response for VM logs.");
-        }
-    } catch (error: any) {
-        if (axios.isAxiosError(error)) {
-            if (error.response?.status === 401) {
-                console.error(
-                    'Error: Unauthorized. Please login first using "login" command.',
-                );
+        if (globalOptions.interactive) {
+            if (logs) {
+                console.log(logs);
             } else {
-                console.error(
-                    "Error fetching VM logs:",
-                    error.response?.status,
-                    error.response?.data || error.message,
-                );
+                console.log("Received an unexpected response for VM logs.");
             }
         } else {
-            console.error("An unexpected error occurred:", error.message);
+            successResponse(logs);
+        }
+    } catch (error: any) {
+        if (globalOptions.interactive) {
+            if (axios.isAxiosError(error)) {
+                if (error.response?.status === 401) {
+                    console.error(
+                        'Error: Unauthorized. Please login first using "login" command.',
+                    );
+                } else {
+                    console.error(
+                        "Error fetching VM logs:",
+                        error.response?.status,
+                        error.response?.data || error.message,
+                    );
+                }
+            } else {
+                console.error("An unexpected error occurred:", error.message);
+            }
+        } else {
+            errorResponse(error);
         }
     }
 }
