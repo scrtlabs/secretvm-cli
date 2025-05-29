@@ -1,11 +1,18 @@
 import { clearSession } from "../../services/apiClient";
-import { successResponse } from "../../utils";
+import { successResponse, handleCommandExecution } from "../../utils";
 import { GlobalOptions } from "../../types";
 
 export async function logoutCommand(
     globalOptions: GlobalOptions,
 ): Promise<void> {
-    await clearSession();
-    if (!globalOptions.interactive) successResponse({});
-    else console.log("Session cleared");
+    await handleCommandExecution(
+        globalOptions,
+        async (): Promise<void> => {
+            await clearSession();
+        },
+        (data: void) => {
+            if (!globalOptions.interactive) successResponse(data);
+            else console.log("Session cleared");
+        },
+    );
 }

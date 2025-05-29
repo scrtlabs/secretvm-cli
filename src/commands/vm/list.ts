@@ -1,74 +1,59 @@
 import { getApiClient } from "../../services/apiClient";
 import { VmInstance, GlobalOptions } from "../../types";
-import { successResponse, errorResponse } from "../../utils";
-import axios from "axios";
+import { AxiosResponse } from "axios";
+import { handleCommandExecution, successResponse } from "../../utils";
 import Table from "cli-table3";
+import { API_ENDPOINTS } from "../../constants";
 
 export async function listVmsCommand(
     globalOptions: GlobalOptions,
 ): Promise<void> {
-    const apiClient = await getApiClient();
-
-    try {
-        const response = await apiClient.get<VmInstance[]>("/api/vm/instances");
-        const vms = response.data;
-
-        if (globalOptions.interactive) {
-            if (vms && vms.length > 0) {
-                var table = new Table({
-                    head: [
-                        "ID",
-                        "UUID",
-                        "Name",
-                        "Status",
-                        "Type",
-                        "PricePerHour",
-                        "IP",
-                        "Domain",
-                        "Created At",
-                    ],
-                });
-                vms.forEach((vm) => {
-                    table.push([
-                        vm.vmId,
-                        vm.id,
-                        vm.nameFromUser,
-                        vm.status,
-                        vm.vmTypeId,
-                        vm.vmType.pricePerHour,
-                        vm.ip_address,
-                        vm.vmDomain,
-                        vm.createdAt,
-                    ]);
-                });
-                console.log(table.toString());
-            } else if (vms) {
-                console.log("No VM instances found.");
-            } else {
-                console.log("Received an unexpected response for VM list.");
-            }
-        } else {
-            successResponse(vms);
-        }
-    } catch (error: any) {
-        if (globalOptions.interactive) {
-            if (axios.isAxiosError(error)) {
-                if (error.response?.status === 401) {
-                    console.error(
-                        'Error: Unauthorized. Please login first using "login" command.',
-                    );
+    await handleCommandExecution(
+        globalOptions,
+        async (): Promise<AxiosResponse> => {
+            const apiClient = await getApiClient();
+            return await apiClient.get<VmInstance[]>(
+                API_ENDPOINTS.VM.INSTANCES,
+            );
+        },
+        (data: AxiosResponse) => {
+            if (globalOptions.interactive) {
+                if (data.data && data.data.length > 0) {
+                    var table = new Table({
+                        head: [
+                            "ID",
+                            "UUID",
+                            "Name",
+                            "Status",
+                            "Type",
+                            "PricePerHour",
+                            "IP",
+                            "Domain",
+                            "Created At",
+                        ],
+                    });
+                    data.data.forEach((vm: VmInstance) => {
+                        table.push([
+                            vm.vmId,
+                            vm.id,
+                            vm.nameFromUser,
+                            vm.status,
+                            vm.vmTypeId,
+                            vm.vmType.pricePerHour,
+                            vm.ip_address,
+                            vm.vmDomain,
+                            vm.createdAt,
+                        ]);
+                    });
+                    console.log(table.toString());
+                } else if (data.data) {
+                    console.log("No VM instances found.");
                 } else {
-                    console.error(
-                        "Error fetching VM instances:",
-                        error.response?.status,
-                        error.response?.data || error.message,
-                    );
+                    console.log("Received an unexpected response for VM list.");
                 }
             } else {
-                console.error("An unexpected error occurred:", error.message);
+                successResponse(data.data);
             }
-        } else {
-            errorResponse(error);
-        }
-    }
+        },
+    );
 }

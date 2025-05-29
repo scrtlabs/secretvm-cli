@@ -1,10 +1,13 @@
 import axios, { AxiosInstance } from "axios";
 import { URLSearchParams } from "url";
 import { CsrfResponse, KeplrLoginResponse } from "../types";
+import { API_ENDPOINTS } from "../constants";
 
 export async function getCsrfToken(client: AxiosInstance): Promise<string> {
     try {
-        const response = await client.get<CsrfResponse>("/api/auth/csrf");
+        const response = await client.get<CsrfResponse>(
+            API_ENDPOINTS.AUTH.CSRF,
+        );
         if (!response.data.csrfToken) {
             throw new Error("CSRF token not found in response.");
         }
@@ -38,7 +41,7 @@ export async function loginWithKeplr(
 
     try {
         const response = await client.post<KeplrLoginResponse>(
-            "/api/auth/callback/keplr",
+            API_ENDPOINTS.AUTH.KEPLR_CALLBACK,
             params.toString(),
             {
                 headers: {

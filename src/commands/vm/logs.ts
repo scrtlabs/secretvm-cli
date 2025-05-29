@@ -1,47 +1,35 @@
 import { getApiClient } from "../../services/apiClient";
-import axios from "axios";
+import { AxiosResponse } from "axios";
 import { GlobalOptions } from "../../types";
-import { successResponse, errorResponse } from "../../utils";
+import { handleCommandExecution, successResponse } from "../../utils";
+import { API_ENDPOINTS } from "../../constants";
 
 export async function vmLogsCommand(
     vmId: string,
     globalOptions: GlobalOptions,
 ): Promise<void> {
-    const apiClient = await getApiClient();
-
-    try {
-        const response = await apiClient.get<string>(
-            `/api/vm/${vmId}/docker_logs`,
-        );
-        const logs = response.data;
-        if (globalOptions.interactive) {
-            if (logs) {
-                console.log(logs);
-            } else {
-                console.log("Received an unexpected response for VM logs.");
-            }
-        } else {
-            successResponse(logs);
-        }
-    } catch (error: any) {
-        if (globalOptions.interactive) {
-            if (axios.isAxiosError(error)) {
-                if (error.response?.status === 401) {
-                    console.error(
-                        'Error: Unauthorized. Please login first using "login" command.',
-                    );
+    if (!vmId || vmId.trim() === "") {
+        throw new Error("VM ID is required.");
+    }
+    const trimmedVmId = vmId.trim();
+    await handleCommandExecution(
+        globalOptions,
+        async (): Promise<AxiosResponse> => {
+            const apiClient = await getApiClient();
+            return await apiClient.get<string>(
+                API_ENDPOINTS.VM.LOGS(trimmedVmId),
+            );
+        },
+        (data: AxiosResponse) => {
+            if (globalOptions.interactive) {
+                if (data.data) {
+                    console.log(data.data);
                 } else {
-                    console.error(
-                        "Error fetching VM logs:",
-                        error.response?.status,
-                        error.response?.data || error.message,
-                    );
+                    console.log("Received an unexpected response for VM logs.");
                 }
             } else {
-                console.error("An unexpected error occurred:", error.message);
+                successResponse(data.data);
             }
-        } else {
-            errorResponse(error);
-        }
-    }
+        },
+    );
 }

@@ -1,96 +1,63 @@
 import inquirer from "inquirer";
-import axios from "axios";
 import { getApiClient } from "../../services/apiClient";
 import { RemoveVmApiResponse, GlobalOptions } from "../../types";
-import { successResponse, errorResponse } from "../../utils";
+import { API_ENDPOINTS } from "../../constants";
+import { AxiosResponse } from "axios";
+import { handleCommandExecution, successResponse } from "../../utils";
 
 export async function removeVmCommand(
     vmId: string,
     globalOptions: GlobalOptions,
 ): Promise<void> {
     if (!vmId || vmId.trim() === "") {
-        if (globalOptions.interactive) {
-            console.error("Error: VM ID is required.");
-        } else {
-            errorResponse("VM ID is required");
-        }
-        return;
+        throw new Error("VM ID is required.");
     }
-
     const trimmedVmId = vmId.trim();
+    await handleCommandExecution(
+        globalOptions,
+        async (): Promise<AxiosResponse> => {
+            if (globalOptions.interactive) {
+                const confirmation = await inquirer.prompt([
+                    {
+                        type: "confirm",
+                        name: "confirmRemove",
+                        message: `🛑 Are you sure you want to remove VM ID "${trimmedVmId}"? This action will terminate the VM and delete its record. This cannot be undone.`,
+                        default: false,
+                    },
+                ]);
 
-    try {
-        if (globalOptions.interactive) {
-            const confirmation = await inquirer.prompt([
-                {
-                    type: "confirm",
-                    name: "confirmRemove",
-                    message: `🛑 Are you sure you want to remove VM ID "${trimmedVmId}"? This action will terminate the VM and delete its record. This cannot be undone.`,
-                    default: false,
-                },
-            ]);
-
-            if (!confirmation.confirmRemove) {
-                console.log("VM removal cancelled by user.");
-                return;
-            }
-        }
-
-        const apiClient = await getApiClient();
-
-        const endpointPath = `/api/vm/${trimmedVmId}/terminate`;
-
-        const response =
-            await apiClient.delete<RemoveVmApiResponse>(endpointPath);
-
-        if (globalOptions.interactive) {
-            if (response.data) {
-                console.log("\nVM remove request processed successfully!");
-                console.log("------------------------------------------");
-                console.log(
-                    `Response Status: ${response.data.status || "N/A"}`,
-                );
-                if (response.data.message) {
-                    console.log(`Message: ${response.data.message}`);
+                if (!confirmation.confirmRemove) {
+                    console.log("VM removal cancelled by user.");
+                    throw new Error("Cancelled");
                 }
-                console.log("------------------------------------------");
-                console.log(`VM ID "${trimmedVmId}" has been removed.`);
-            } else {
-                console.log(
-                    "VM remove request processed, but the response was empty or in an unexpected format.",
-                );
             }
-        } else {
-            successResponse(response.data);
-        }
-    } catch (error: any) {
-        if (globalOptions.interactive) {
-            if (axios.isAxiosError(error)) {
-                if (error.response?.status === 401) {
-                    console.error(
-                        'Error: Unauthorized. Please login first using the "login" command.',
+
+            const apiClient = await getApiClient();
+            return await apiClient.delete<RemoveVmApiResponse>(
+                API_ENDPOINTS.VM.TERMINATE(trimmedVmId),
+            );
+        },
+        (data: AxiosResponse) => {
+            if (globalOptions.interactive) {
+                if (data.data) {
+                    console.log("\nVM remove request processed successfully!");
+                    console.log("------------------------------------------");
+                    console.log(
+                        `Response Status: ${data.data.status || "N/A"}`,
                     );
-                } else if (error.response?.status === 404) {
-                    console.error(
-                        `Error: VM ID "${trimmedVmId}" not found or you are not authorized to remove it.`,
-                    );
+                    if (data.data.message) {
+                        console.log(`Message: ${data.data.message}`);
+                    }
+                    console.log("------------------------------------------");
+                    console.log(`VM ID "${trimmedVmId}" has been removed.`);
                 } else {
-                    const errorMsg =
-                        error.response?.data?.message ||
-                        error.response?.data ||
-                        error.message;
-                    console.error(
-                        `Error removing VM (HTTP ${error.response?.status}): ${errorMsg}`,
+                    console.log(
+                        "VM remove request processed, but the response was empty or in an unexpected format.",
                     );
                 }
             } else {
-                console.error(
-                    "An unexpected error occurred during the VM removal operation:",
-                    error.message || error,
-                );
+                successResponse(data.data);
             }
-        } else {
-            errorResponse(error);
-        }
-    }
+        },
+    );
 }
