@@ -11,8 +11,8 @@ A command-line interface to manage Secret Virtual Machines (SecretVMs) and inter
 
 1. Clone the Repository
 ```bash
-git clone https://github.com/scrtlabs/secretai-devportal-cli.git
-cd secretai-devportal-cli
+git clone https://github.com/scrtlabs/secretvm-cli.git
+cd secretvm-cli
 ```
 
 2. Install Dependencies
@@ -33,4 +33,4 @@ To use the CLI command from anywhere on your system, you can link it:
 ```
 npm link
 ```
-This will make the command `secretai-devportal-cli` available globally. Alternatively, you can run it directly using `node dist/cli.js`
+This will make the command `secretvm-cli` available globally. Alternatively, you can run it directly using `node dist/cli.js`

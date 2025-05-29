@@ -1,10 +1,10 @@
 {
-  "name": "secretai-devportal-cli",
+  "name": "secretvm-cli",
   "version": "0.1.0",
   "description": "SecretAI devportal cli",
   "main": "dist/cli.js",
   "bin": {
-    "secretai-devportal-cli": "./dist/cli.js"
+    "secretvm-cli": "./dist/cli.js"
   },
   "scripts": {
     "start": "node dist/cli.js",

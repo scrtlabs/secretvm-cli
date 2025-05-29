@@ -20,7 +20,7 @@ async function main() {
     const program = new Command();
 
     program
-        .name("secretai-devportal-cli")
+        .name("secretvm-cli")
         .description("CLI tool for SecretAI devportal")
         .version("0.1.0")
         .option(

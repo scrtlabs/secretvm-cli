@@ -8,7 +8,7 @@ import os from "os";
 export const SERVER_BASE_URL =
     process.env.SERVER_BASE_URL || "https://secretai.scrtlabs.com";
 
-const SESSION_DIR = path.join(os.homedir(), ".secretai-devportal-cli");
+const SESSION_DIR = path.join(os.homedir(), ".secretvm-cli");
 const SESSION_FILE = path.join(SESSION_DIR, "session.json");
 
 let currentJar: CookieJar | null = null;
