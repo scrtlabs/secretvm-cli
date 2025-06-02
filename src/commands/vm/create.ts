@@ -7,11 +7,13 @@ import {
     CreateVmApiResponse,
     GlobalOptions,
     CreateVmCommandOptions,
+    DockerCompose,
 } from "../../types";
 import { handleCommandExecution, successResponse } from "../../utils";
 import Table from "cli-table3";
 import { API_ENDPOINTS } from "../../constants";
 import { AxiosResponse } from "axios";
+import yaml from "js-yaml";
 
 export async function createVmCommand(
     cmdOptions: CreateVmCommandOptions,
@@ -21,6 +23,7 @@ export async function createVmCommand(
     let type = cmdOptions.type;
     let dockerComposePath = cmdOptions.dockerCompose;
     let inviteCode = cmdOptions.inviteCode;
+    let enableHttps = cmdOptions.tls ?? false;
 
     await handleCommandExecution(
         globalOptions,
@@ -92,6 +95,16 @@ export async function createVmCommand(
                     ]);
                     inviteCode = answers.inviteCode;
                 }
+                if (!enableHttps) {
+                    const answers = await inquirer.prompt([
+                        {
+                            type: "input",
+                            name: "https",
+                            message: "Enable HTTPS with TLS? (y/N)",
+                        },
+                    ]);
+                    enableHttps = answers.https.toLowerCase().startsWith("y");
+                }
             } else {
                 if (!name) {
                     throw new Error("Missing required option: -n, --name");
@@ -119,10 +132,87 @@ export async function createVmCommand(
                 dockerComposePath!.trim(),
             );
             const fileBuffer = fs.readFileSync(absoluteDockerComposePath);
+            let dockerComposeContent = fileBuffer.toString();
+            if (enableHttps) {
+                const dockerCompose = yaml.load(
+                    dockerComposeContent,
+                ) as DockerCompose;
+
+                // Create traefik network if it doesn't exist
+                if (!dockerCompose.networks) {
+                    dockerCompose.networks = {};
+                }
+                dockerCompose.networks.traefik = {
+                    driver: "bridge",
+                };
+
+                // Add Traefik service
+                dockerCompose.services.traefik = {
+                    image: "traefik:v2.10",
+                    command: [
+                        "--api.insecure=false",
+                        "--providers.docker=true",
+                        "--providers.docker.exposedbydefault=false",
+                        "--entrypoints.web.address=:80",
+                        "--entrypoints.websecure.address=:443",
+                        "--certificatesresolvers.myresolver.acme.tlschallenge=true",
+                        "--certificatesresolvers.myresolver.acme.email=admin@$DOMAIN_NAME",
+                        "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
+                    ],
+                    ports: ["80:80", "443:443"],
+                    volumes: [
+                        "/var/run/docker.sock:/var/run/docker.sock:ro",
+                        "./letsencrypt:/letsencrypt",
+                    ],
+                    networks: ["traefik"],
+                    labels: {
+                        "traefik.enable": "true",
+                        "traefik.http.routers.traefik.entrypoints": "websecure",
+                        "traefik.http.routers.traefik.service": "api@internal",
+                        "traefik.http.routers.traefik.tls.certresolver":
+                            "myresolver",
+                        "traefik.http.routers.traefik.middlewares": "auth",
+                        "traefik.http.middlewares.auth.basicauth.users":
+                            "admin:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
+                    },
+                };
+
+                // Add Traefik labels to all other services
+                Object.keys(dockerCompose.services).forEach((serviceName) => {
+                    if (serviceName !== "traefik") {
+                        const service = dockerCompose.services[serviceName];
+
+                        if (!service.networks) {
+                            service.networks = [];
+                        }
+                        if (!service.networks.includes("traefik")) {
+                            service.networks.push("traefik");
+                        }
+
+                        if (!service.labels) {
+                            service.labels = {};
+                        }
+
+                        service.labels = {
+                            ...service.labels,
+                            "traefik.enable": "true",
+                            [`traefik.http.routers.${serviceName}.rule`]: `Host(\`$DOMAIN_NAME\`)`,
+                            [`traefik.http.routers.${serviceName}.entrypoints`]:
+                                "websecure",
+                            [`traefik.http.routers.${serviceName}.tls.certresolver`]:
+                                "myresolver",
+                            [`traefik.http.services.${serviceName}.loadbalancer.server.port`]:
+                                "80",
+                        };
+                    }
+                });
+
+                dockerComposeContent = yaml.dump(dockerCompose);
+            }
             // The server expects the file field to be named 'dockercompose'
             formData.append(
                 "dockercompose",
-                fileBuffer,
+                dockerComposeContent,
                 path.basename(absoluteDockerComposePath),
             );
             return await apiClient.post<CreateVmApiResponse>(

@@ -21,10 +21,12 @@
     "cli-table3": "^0.6.5",
     "commander": "^12.x.x",
     "inquirer": "^8.x.x",
+    "js-yaml": "^4.1.0",
     "tough-cookie": "^4.x.x"
   },
   "devDependencies": {
     "@types/inquirer": "^8.x.x",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.x.x",
     "@types/tough-cookie": "^4.x.x",
     "ts-node": "^10.x.x",

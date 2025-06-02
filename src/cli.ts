@@ -75,9 +75,9 @@ async function main() {
             "-d, --docker-compose <dockerComposePath>",
             "Path to docker-compose.yaml",
         )
+        .option("-s, --tls", "Enable HTTPS with TLS")
         .option("-c, --invite-code <inviteCode>", "Invite code (optional)")
         .action(async (cmdOptions) => {
-            console.log(cmdOptions);
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });
     vmCommands
