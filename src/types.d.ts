@@ -113,6 +113,7 @@ export interface GlobalOptions {
 
 export interface LoginCommandOptions {
     walletAddress?: string;
+    signature?: string;
 }
 
 export interface CreateVmCommandOptions {

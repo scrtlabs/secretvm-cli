@@ -32,10 +32,14 @@ export async function getCsrfToken(client: AxiosInstance): Promise<string> {
 export async function loginWithKeplr(
     client: AxiosInstance,
     walletAddress: string,
+    signature: string,
+    message: string,
     csrfToken: string,
 ): Promise<KeplrLoginResponse | null> {
     const params = new URLSearchParams();
     params.append("walletAddress", walletAddress);
+    params.append("signature", signature);
+    params.append("message", message);
     params.append("csrfToken", csrfToken);
     params.append("json", "true");
 

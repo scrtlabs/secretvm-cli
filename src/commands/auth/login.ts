@@ -8,11 +8,15 @@ import { getCsrfToken, loginWithKeplr } from "../../services/authService";
 import { LoginCommandOptions, GlobalOptions } from "../../types";
 import { successResponse, handleCommandExecution } from "../../utils";
 
+const MESSAGE_TO_SIGN =
+    "Sign this message to authenticate with Secret AI Developer Portal";
+
 export async function loginCommand(
     cmdOptions: LoginCommandOptions,
     globalOptions: GlobalOptions,
 ): Promise<void> {
     let walletAddress = cmdOptions.walletAddress;
+    let signature = cmdOptions.signature;
     await handleCommandExecution(
         globalOptions,
         async (): Promise<string> => {
@@ -39,6 +43,8 @@ export async function loginCommand(
             const loginResult = await loginWithKeplr(
                 apiClient,
                 walletAddress!,
+                signature!,
+                MESSAGE_TO_SIGN,
                 csrfToken,
             );
             if (loginResult) {
