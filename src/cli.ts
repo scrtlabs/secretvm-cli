@@ -32,16 +32,9 @@ async function main() {
     const authCommands = new Command("auth").description("Auth commands");
     authCommands
         .command("login")
-        .description(
-            "Login to the service via Keplr signature. In non-interactive mode, use options for credentials.",
-        )
-        .option("-w, --wallet-address <address>", "Keplr wallet address")
-        .option(
-            "-s, --signature <signature>",
-            "Base64 signature from signing the required message",
-        )
-        .action(async (cmdOptions) => {
-            await loginCommand(cmdOptions, program.opts() as GlobalOptions);
+        .description("Login to the service using web browser")
+        .action(async () => {
+            await loginCommand(program.opts() as GlobalOptions);
         });
     authCommands
         .command("logout")

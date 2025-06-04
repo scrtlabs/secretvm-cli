@@ -22,6 +22,7 @@
     "commander": "^12.x.x",
     "inquirer": "^8.x.x",
     "js-yaml": "^4.1.0",
+    "open": "^10.1.2",
     "tough-cookie": "^4.x.x"
   },
   "devDependencies": {
