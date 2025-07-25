@@ -24,6 +24,7 @@ export async function createVmCommand(
     let dockerComposePath = cmdOptions.dockerCompose;
     let inviteCode = cmdOptions.inviteCode;
     let enableHttps = cmdOptions.tls ?? false;
+    let secrets_plaintext: string | undefined;
 
     await handleCommandExecution(
         globalOptions,
@@ -68,7 +69,6 @@ export async function createVmCommand(
                                 if (trimmedInput === "")
                                     return "Path cannot be empty.";
                                 try {
-                                    // Check if path is absolute or resolve it
                                     const resolvedPath =
                                         path.resolve(trimmedInput);
                                     fs.accessSync(
@@ -84,6 +84,32 @@ export async function createVmCommand(
                     ]);
                     dockerComposePath = answers.dockerComposePath;
                 }
+
+                const { addEnv } = await inquirer.prompt([
+                    {
+                        type: "confirm",
+                        name: "addEnv",
+                        message:
+                            "Do you want to add environment variables (secrets)?",
+                        default: false,
+                    },
+                ]);
+
+                if (addEnv) {
+                    const { secrets } = await inquirer.prompt([
+                        {
+                            type: "editor",
+                            name: "secrets",
+                            message:
+                                "Enter variables in VAR=VALUE format (opens in your default editor).",
+                            validate: (text: string) =>
+                                text.trim().length > 0 ||
+                                "Secrets cannot be empty.",
+                        },
+                    ]);
+                    secrets_plaintext = secrets;
+                }
+
                 if (!inviteCode) {
                     const answers = await inquirer.prompt([
                         {
@@ -95,15 +121,16 @@ export async function createVmCommand(
                     ]);
                     inviteCode = answers.inviteCode;
                 }
-                if (!enableHttps) {
+                if (cmdOptions.tls === undefined) {
                     const answers = await inquirer.prompt([
                         {
-                            type: "input",
+                            type: "confirm",
                             name: "https",
-                            message: "Enable HTTPS with TLS? (y/N)",
+                            message: "Enable HTTPS with TLS?",
+                            default: false,
                         },
                     ]);
-                    enableHttps = answers.https.toLowerCase().startsWith("y");
+                    enableHttps = answers.https;
                 }
             } else {
                 if (!name) {
@@ -117,7 +144,19 @@ export async function createVmCommand(
                         "Missing required option: -d, --docker-compose",
                     );
                 }
+                if (cmdOptions.env) {
+                    try {
+                        const envPath = path.resolve(cmdOptions.env);
+                        fs.accessSync(envPath, fs.constants.R_OK);
+                        secrets_plaintext = fs.readFileSync(envPath, "utf-8");
+                    } catch (err) {
+                        throw new Error(
+                            `Environment file "${cmdOptions.env}" does not exist or is not readable.`,
+                        );
+                    }
+                }
             }
+
             const apiClient = await getApiClient();
             const formData = new FormData();
 
@@ -126,6 +165,10 @@ export async function createVmCommand(
 
             if (inviteCode && inviteCode.trim() !== "") {
                 formData.append("inviteCode", inviteCode.trim());
+            }
+
+            if (secrets_plaintext && secrets_plaintext.trim() !== "") {
+                formData.append("secrets_plaintext", secrets_plaintext.trim());
             }
 
             const absoluteDockerComposePath = path.resolve(
@@ -215,6 +258,7 @@ export async function createVmCommand(
                 dockerComposeContent,
                 path.basename(absoluteDockerComposePath),
             );
+
             return await apiClient.post<CreateVmApiResponse>(
                 API_ENDPOINTS.VM.CREATE,
                 formData,
@@ -231,7 +275,7 @@ export async function createVmCommand(
             if (globalOptions.interactive) {
                 if (data.data && data.data.id) {
                     console.log(
-                        "\nVM creation process initiated successfully!",
+                        "\nVM creation process initiated successfully! ✅",
                     );
                     var table = new Table({
                         head: [

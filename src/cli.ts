@@ -70,6 +70,7 @@ async function main() {
         )
         .option("-s, --tls", "Enable HTTPS with TLS")
         .option("-c, --invite-code <inviteCode>", "Invite code (optional)")
+        .option("-e, --env <env>", "Path to your env file")
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });
