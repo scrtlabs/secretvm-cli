@@ -4,6 +4,9 @@ import { wrapper } from "axios-cookiejar-support";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
+import { GlobalOptions } from "../types";
+import dotenv from "dotenv";
+dotenv.config();
 
 export const SERVER_BASE_URL =
     process.env.SERVER_BASE_URL || "https://secretai.scrtlabs.com";
@@ -77,13 +80,22 @@ export async function clearSession(): Promise<void> {
     }
 }
 
-export async function getApiClient(): Promise<AxiosInstance> {
+export async function getApiClient(
+    globalOptions: GlobalOptions,
+): Promise<AxiosInstance> {
+    const headers: { [key: string]: string } = {};
+    if (globalOptions.apiKey) {
+        headers["Authorization"] = `Bearer ${globalOptions.apiKey}`;
+        headers["x-swagger"] = "true";
+    }
+
     const jarToUse = (await loadSession()) || new CookieJar();
     return wrapper(
         axios.create({
-            jar: jarToUse,
+            jar: globalOptions.apiKey ? undefined : jarToUse,
             baseURL: SERVER_BASE_URL,
             withCredentials: true,
+            headers,
         }),
     );
 }

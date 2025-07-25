@@ -16,7 +16,7 @@ export async function startVmCommand(
     await handleCommandExecution(
         globalOptions,
         async (): Promise<AxiosResponse> => {
-            const apiClient = await getApiClient();
+            const apiClient = await getApiClient(globalOptions);
             return await apiClient.post<StartVmApiResponse>(
                 API_ENDPOINTS.VM.START(trimmedVmId),
             );

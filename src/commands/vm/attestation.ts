@@ -15,7 +15,7 @@ export async function vmAttestationCommand(
     await handleCommandExecution(
         globalOptions,
         async (): Promise<AxiosResponse> => {
-            const apiClient = await getApiClient();
+            const apiClient = await getApiClient(globalOptions);
             return await apiClient.get<string>(
                 API_ENDPOINTS.VM.CPU_ATTESTATION(trimmedVmId),
             );

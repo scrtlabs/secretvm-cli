@@ -32,7 +32,7 @@ export async function removeVmCommand(
                 }
             }
 
-            const apiClient = await getApiClient();
+            const apiClient = await getApiClient(globalOptions);
             return await apiClient.delete<RemoveVmApiResponse>(
                 API_ENDPOINTS.VM.TERMINATE(trimmedVmId),
             );

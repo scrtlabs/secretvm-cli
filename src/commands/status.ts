@@ -10,7 +10,7 @@ export async function statusCommand(
     await handleCommandExecution(
         globalOptions,
         async (): Promise<AxiosResponse> => {
-            const apiClient = await getApiClient();
+            const apiClient = await getApiClient(globalOptions);
             const response = await apiClient.get<AuthSession>(
                 API_ENDPOINTS.AUTH.SESSION,
             );

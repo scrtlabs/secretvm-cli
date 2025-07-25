@@ -27,7 +27,8 @@ async function main() {
             "-i, --interactive",
             "Enable interactive mode with prompts and human-readable output",
             false,
-        );
+        )
+        .option("-k, --api-key <key>", "API key for authentication");
 
     const authCommands = new Command("auth").description("Auth commands");
     authCommands

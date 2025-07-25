@@ -157,7 +157,7 @@ export async function createVmCommand(
                 }
             }
 
-            const apiClient = await getApiClient();
+            const apiClient = await getApiClient(globalOptions);
             const formData = new FormData();
 
             formData.append("name", name!.trim());

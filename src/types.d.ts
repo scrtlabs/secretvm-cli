@@ -109,6 +109,7 @@ export interface VmDetailsApiResponse {
 
 export interface GlobalOptions {
     interactive: boolean;
+    apiKey?: string;
 }
 
 export interface LoginCommandOptions {

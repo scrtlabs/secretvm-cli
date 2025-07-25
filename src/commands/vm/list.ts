@@ -11,7 +11,7 @@ export async function listVmsCommand(
     await handleCommandExecution(
         globalOptions,
         async (): Promise<AxiosResponse> => {
-            const apiClient = await getApiClient();
+            const apiClient = await getApiClient(globalOptions);
             return await apiClient.get<VmInstance[]>(
                 API_ENDPOINTS.VM.INSTANCES,
             );

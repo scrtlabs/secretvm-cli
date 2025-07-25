@@ -15,7 +15,7 @@ export async function stopVmCommand(
     await handleCommandExecution(
         globalOptions,
         async (): Promise<AxiosResponse> => {
-            const apiClient = await getApiClient();
+            const apiClient = await getApiClient(globalOptions);
             return await apiClient.post<StopVmApiResponse>(
                 API_ENDPOINTS.VM.STOP(trimmedVmId),
             );
