@@ -1,8 +1,11 @@
 {
   "name": "secretvm-cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "SecretAI devportal cli",
   "main": "dist/cli.js",
+  "files": [
+    "dist"
+  ],
   "bin": {
     "secretvm-cli": "./dist/cli.js"
   },
