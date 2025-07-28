@@ -5,8 +5,6 @@ import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import { GlobalOptions } from "../types";
-import dotenv from "dotenv";
-dotenv.config();
 
 export const SERVER_BASE_URL =
     process.env.SERVER_BASE_URL || "https://secretai.scrtlabs.com";
