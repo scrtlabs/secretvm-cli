@@ -122,8 +122,11 @@ export interface CreateVmCommandOptions {
     type?: string;
     dockerCompose?: string;
     inviteCode?: string;
-    tls?: bool;
+    tls?: boolean;
     env?: string;
+    domain?: string;
+    dockerCredentials?: string;
+    dockerRegistry?: string;
 }
 
 export interface DockerCompose {

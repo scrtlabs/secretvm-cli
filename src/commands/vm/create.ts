@@ -14,6 +14,7 @@ import Table from "cli-table3";
 import { API_ENDPOINTS } from "../../constants";
 import { AxiosResponse } from "axios";
 import yaml from "js-yaml";
+import { encryptDockerCredentials } from "../../services/encryption";
 
 export async function createVmCommand(
     cmdOptions: CreateVmCommandOptions,
@@ -24,6 +25,9 @@ export async function createVmCommand(
     let dockerComposePath = cmdOptions.dockerCompose;
     let inviteCode = cmdOptions.inviteCode;
     let enableHttps = cmdOptions.tls ?? false;
+    let domain = cmdOptions.domain;
+    let dockerCredentials = cmdOptions.dockerCredentials;
+    let dockerRegistry = cmdOptions.dockerRegistry ?? "docker.io";
     let secrets_plaintext: string | undefined;
     if (cmdOptions.env) {
         try {
@@ -145,6 +149,52 @@ export async function createVmCommand(
                     ]);
                     enableHttps = answers.https;
                 }
+
+                if (!domain) {
+                    const answers = await inquirer.prompt([
+                        {
+                            type: "input",
+                            name: "domain",
+                            message: "Enter your custom domain (FQDN):",
+                        },
+                    ]);
+                    domain = answers.domain;
+                }
+
+                if (!dockerRegistry && !dockerCredentials) {
+                    const { usePrivateRegistry } = await inquirer.prompt([
+                        {
+                            type: "confirm",
+                            name: "usePrivateRegistry",
+                            message:
+                                "Do you want to use a private Docker registry?",
+                            default: false,
+                        },
+                    ]);
+
+                    if (usePrivateRegistry) {
+                        const answers = await inquirer.prompt([
+                            {
+                                type: "input",
+                                name: "dockerRegistry",
+                                message: "Enter the Docker registry URL:",
+                            },
+                            {
+                                type: "input",
+                                name: "username",
+                                message: "Enter your Docker registry username:",
+                            },
+                            {
+                                type: "password",
+                                name: "password",
+                                message: "Enter your Docker registry password:",
+                                mask: "*",
+                            },
+                        ]);
+                        dockerRegistry = answers.dockerRegistry;
+                        dockerCredentials = `${answers.username}:${answers.password}`;
+                    }
+                }
             } else {
                 if (!name) {
                     throw new Error("Missing required option: -n, --name");
@@ -171,6 +221,39 @@ export async function createVmCommand(
 
             if (secrets_plaintext && secrets_plaintext.trim() !== "") {
                 formData.append("secrets_plaintext", secrets_plaintext.trim());
+            }
+
+            if (domain && domain.trim() !== "") {
+                formData.append("custom_domain", domain.trim());
+                formData.append("skip_launch", "1");
+            }
+
+            if (dockerCredentials && dockerCredentials.trim() != "") {
+                if (dockerRegistry.trim() != "") {
+                    const [username, password] = dockerCredentials.split(":");
+                    if (!username || !password) {
+                        throw new Error(
+                            "Invalid Docker credentials format. Expected username:password",
+                        );
+                    }
+
+                    const encryptedCredentials = await encryptDockerCredentials(
+                        dockerRegistry,
+                        username,
+                        password,
+                    );
+
+                    formData.append(
+                        "docker_credentials_encrypted",
+                        encryptedCredentials.encryptedData,
+                    );
+                    formData.append(
+                        "docker_credentials_key",
+                        encryptedCredentials.encryptedAESKey,
+                    );
+                } else {
+                    throw new Error("Docker registry cannot be empty.");
+                }
             }
 
             const absoluteDockerComposePath = path.resolve(

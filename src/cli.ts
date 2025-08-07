@@ -72,6 +72,15 @@ async function main() {
         .option("-s, --tls", "Enable HTTPS with TLS")
         .option("-c, --invite-code <inviteCode>", "Invite code (optional)")
         .option("-e, --env <env>", "Path to your env file")
+        .option("-m, --domain <customDomain>", "Your controlled FQDN")
+        .option(
+            "-l, --docker-credentials <dockerCredentials>",
+            "Credentials for private docker registries (username:password)",
+        )
+        .option(
+            "-r, --docker-registry <dockerRegistry>",
+            "Docker registry where your private image is hosted (default: docker.io)",
+        )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });
