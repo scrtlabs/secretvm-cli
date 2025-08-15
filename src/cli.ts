@@ -15,6 +15,7 @@ import {
     vmStatusCommand,
 } from "./commands";
 import { GlobalOptions } from "./types";
+import pkg from "../package.json";
 
 async function main() {
     const program = new Command();
@@ -22,7 +23,7 @@ async function main() {
     program
         .name("secretvm-cli")
         .description("CLI tool for SecretAI devportal")
-        .version("0.1.0")
+        .version(pkg.version)
         .option(
             "-i, --interactive",
             "Enable interactive mode with prompts and human-readable output",

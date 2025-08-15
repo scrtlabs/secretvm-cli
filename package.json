@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "node dist/cli.js",
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/cli.js",
     "dev": "ts-node src/cli.ts",
     "prepublishOnly": "npm run build"
   },
