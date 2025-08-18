@@ -127,6 +127,8 @@ export interface CreateVmCommandOptions {
     domain?: string;
     dockerCredentials?: string;
     dockerRegistry?: string;
+    persistence?: boolean;
+    upgradeability?: boolean;
 }
 
 export interface DockerCompose {

@@ -28,6 +28,8 @@ export async function createVmCommand(
     let domain = cmdOptions.domain;
     let dockerCredentials = cmdOptions.dockerCredentials;
     let dockerRegistry = cmdOptions.dockerRegistry ?? "docker.io";
+    let fsPersistence = cmdOptions.persistence;
+    let upgradeability = cmdOptions.upgradeability;
     let secrets_plaintext: string | undefined;
     if (cmdOptions.env) {
         try {
@@ -195,6 +197,30 @@ export async function createVmCommand(
                         dockerCredentials = `${answers.username}:${answers.password}`;
                     }
                 }
+                if (!fsPersistence) {
+                    const { enablePersistence } = await inquirer.prompt([
+                        {
+                            type: "confirm",
+                            name: "enablePersistence",
+                            message:
+                                "Do you want to enable filesystem persistence?",
+                            default: true,
+                        },
+                    ]);
+                    fsPersistence = enablePersistence;
+                }
+                if (!upgradeability) {
+                    const { enableUpgradeability } = await inquirer.prompt([
+                        {
+                            type: "confirm",
+                            name: "enableUpgradeability",
+                            message:
+                                "Do you want to enable SecretVM upgradeability?",
+                            default: false,
+                        },
+                    ]);
+                    upgradeability = enableUpgradeability;
+                }
             } else {
                 if (!name) {
                     throw new Error("Missing required option: -n, --name");
@@ -343,6 +369,14 @@ export async function createVmCommand(
                 dockerComposeContent,
                 path.basename(absoluteDockerComposePath),
             );
+
+            if (fsPersistence) {
+                formData.append("fs_persistence", "1");
+            }
+
+            if (upgradeability) {
+                formData.append("upgradeability", "1");
+            }
 
             return await apiClient.post<CreateVmApiResponse>(
                 API_ENDPOINTS.VM.CREATE,

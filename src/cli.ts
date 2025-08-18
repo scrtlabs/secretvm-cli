@@ -74,6 +74,8 @@ async function main() {
         .option("-c, --invite-code <inviteCode>", "Invite code (optional)")
         .option("-e, --env <env>", "Path to your env file")
         .option("-m, --domain <customDomain>", "Your controlled FQDN")
+        .option("-p, --persistence", "Enable filesystem persistence")
+        .option("-u, --upgradeability", "Enable SecretVM upgradeability")
         .option(
             "-l, --docker-credentials <dockerCredentials>",
             "Credentials for private docker registries (username:password)",
