@@ -13,5 +13,6 @@ export const API_ENDPOINTS = {
         TERMINATE: (vmId: string) => `/api/vm/${vmId}/terminate`,
         LOGS: (vmId: string) => `/api/vm/${vmId}/docker_logs`,
         CPU_ATTESTATION: (vmId: string) => `/api/vm/${vmId}/cpu`,
+        LAUNCH: (vmId: string) => `/api/vm/${vmId}/launch`,
     },
 };

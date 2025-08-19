@@ -131,6 +131,15 @@ export interface CreateVmCommandOptions {
     upgradeability?: boolean;
 }
 
+export interface EditVmCommandOptions {
+    name?: string;
+    dockerCompose?: string;
+    env?: string;
+    persistence?: boolean;
+    dockerCredentials?: string;
+    dockerRegistry?: string;
+}
+
 export interface DockerCompose {
     version?: string;
     services: {

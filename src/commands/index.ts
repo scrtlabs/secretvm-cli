@@ -9,3 +9,4 @@ export { stopVmCommand } from "./vm/stop";
 export { removeVmCommand } from "./vm/remove";
 export { startVmCommand } from "./vm/start";
 export { vmStatusCommand } from "./vm/status";
+export { editVmCommand } from "./vm/edit";

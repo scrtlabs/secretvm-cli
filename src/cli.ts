@@ -13,6 +13,7 @@ import {
     startVmCommand,
     removeVmCommand,
     vmStatusCommand,
+    editVmCommand,
 } from "./commands";
 import { GlobalOptions } from "./types";
 import pkg from "../package.json";
@@ -86,6 +87,32 @@ async function main() {
         )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
+        });
+    vmCommands
+        .command("edit")
+        .description("Edit a virtual machine's docker-compose")
+        .argument("<vmId>", "The ID of the VM to edit")
+        .option("-n, --name <vmName>", "New VM name")
+        .option(
+            "-d, --docker-compose <dockerComposePath>",
+            "Path to the new docker-compose.yaml",
+        )
+        .option("-e, --env <env>", "Path to your new env file")
+        .option("-p, --persistence", "Enable filesystem persistence")
+        .option(
+            "-l, --docker-credentials <dockerCredentials>",
+            "Credentials for private docker registries (username:password)",
+        )
+        .option(
+            "-r, --docker-registry <dockerRegistry>",
+            "Docker registry where your private image is hosted (default: docker.io)",
+        )
+        .action(async (vmId: string, cmdOptions) => {
+            await editVmCommand(
+                vmId,
+                cmdOptions,
+                program.opts() as GlobalOptions,
+            );
         });
     vmCommands
         .command("stop")
