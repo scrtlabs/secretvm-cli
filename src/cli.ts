@@ -76,6 +76,7 @@ async function main() {
         .option("-e, --env <env>", "Path to your env file")
         .option("-m, --domain <customDomain>", "Your controlled FQDN")
         .option("-p, --persistence", "Enable filesystem persistence")
+        .option("-a, --private", "Enable private mode")
         .option("-u, --upgradeability", "Enable SecretVM upgradeability")
         .option(
             "-l, --docker-credentials <dockerCredentials>",

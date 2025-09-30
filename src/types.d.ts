@@ -129,6 +129,7 @@ export interface CreateVmCommandOptions {
     dockerRegistry?: string;
     persistence?: boolean;
     upgradeability?: boolean;
+    private?: boolean;
 }
 
 export interface EditVmCommandOptions {

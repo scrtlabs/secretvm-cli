@@ -29,6 +29,7 @@ export async function createVmCommand(
     let dockerCredentials = cmdOptions.dockerCredentials;
     let dockerRegistry = cmdOptions.dockerRegistry ?? "docker.io";
     let fsPersistence = cmdOptions.persistence;
+    let privateMode = cmdOptions.private ?? false;
     let upgradeability = cmdOptions.upgradeability;
     let secrets_plaintext: string | undefined;
     if (cmdOptions.env) {
@@ -209,6 +210,17 @@ export async function createVmCommand(
                     ]);
                     fsPersistence = enablePersistence;
                 }
+                if (!privateMode) {
+                    const { enablePrivateMode } = await inquirer.prompt([
+                        {
+                            type: "confirm",
+                            name: "enablePrivateMode",
+                            message: "Do you want to enable Private mode?",
+                            default: false,
+                        },
+                    ]);
+                    privateMode = enablePrivateMode;
+                }
                 if (!upgradeability) {
                     const { enableUpgradeability } = await inquirer.prompt([
                         {
@@ -372,6 +384,10 @@ export async function createVmCommand(
 
             if (fsPersistence) {
                 formData.append("fs_persistence", "1");
+            }
+
+            if (privateMode) {
+                formData.append("private", "1");
             }
 
             if (upgradeability) {
