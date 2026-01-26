@@ -29,6 +29,7 @@ export async function createVmCommand(
     let dockerCredentials = cmdOptions.dockerCredentials;
     let dockerRegistry = cmdOptions.dockerRegistry ?? "docker.io";
     let fsPersistence = cmdOptions.persistence;
+    let platform = cmdOptions.platform;
     let privateMode = cmdOptions.private ?? false;
     let upgradeability = cmdOptions.upgradeability;
     let secrets_plaintext: string | undefined;
@@ -210,6 +211,21 @@ export async function createVmCommand(
                     ]);
                     fsPersistence = enablePersistence;
                 }
+                if (!platform) {
+                    const { platformChoice } = await inquirer.prompt([
+                        {
+                            type: "list",
+                            name: "platformChoice",
+                            message: "What platform?",
+                            choices: [
+                                { name: "Intel TDX", value: "tdx" },
+                                { name: "AMD SEV-SNP", value: "sev" },
+                            ],
+                            default: "tdx",
+                        },
+                    ]);
+                    platform = platformChoice;
+                }
                 if (!privateMode) {
                     const { enablePrivateMode } = await inquirer.prompt([
                         {
@@ -243,6 +259,11 @@ export async function createVmCommand(
                 if (!dockerComposePath) {
                     throw new Error(
                         "Missing required option: -d, --docker-compose",
+                    );
+                }
+                if (platform && !(["sev", "tdx"].includes(platform))) {
+                    throw new Error(
+                        "Platform should be either sev or tdx",
                     );
                 }
             }
@@ -384,6 +405,10 @@ export async function createVmCommand(
 
             if (fsPersistence) {
                 formData.append("fs_persistence", "1");
+            }
+
+            if (platform) {
+                formData.append("platform", platform);
             }
 
             if (privateMode) {

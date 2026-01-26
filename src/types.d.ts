@@ -130,6 +130,7 @@ export interface CreateVmCommandOptions {
     persistence?: boolean;
     upgradeability?: boolean;
     private?: boolean;
+    platform?: string;
 }
 
 export interface EditVmCommandOptions {

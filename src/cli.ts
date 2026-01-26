@@ -78,6 +78,7 @@ async function main() {
         .option("-p, --persistence", "Enable filesystem persistence")
         .option("-a, --private", "Enable private mode")
         .option("-u, --upgradeability", "Enable SecretVM upgradeability")
+        .option("-f, --platform <sev|tdx>", "AMD SEV-SNP (sev) or Intel TDX (tdx) (default)")
         .option(
             "-l, --docker-credentials <dockerCredentials>",
             "Credentials for private docker registries (username:password)",
