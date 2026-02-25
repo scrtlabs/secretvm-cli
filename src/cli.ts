@@ -14,6 +14,7 @@ import {
     removeVmCommand,
     vmStatusCommand,
     editVmCommand,
+    listTemplatesCommand,
 } from "./commands";
 import { GlobalOptions } from "./types";
 import pkg from "../package.json";
@@ -63,6 +64,12 @@ async function main() {
             await listVmsCommand(program.opts() as GlobalOptions);
         });
     vmCommands
+        .command("templates")
+        .description("List available VM templates")
+        .action(async () => {
+            await listTemplatesCommand(program.opts() as GlobalOptions);
+        });
+    vmCommands
         .command("create")
         .description("Create new virtual machine")
         .option("-n, --name <vmName>", "VM name")
@@ -71,6 +78,10 @@ async function main() {
             "-d, --docker-compose <dockerComposePath>",
             "Path to docker-compose.yaml",
         )
+        .option(
+            "-T, --template <templateId>",
+            "Create VM from a template (ID or name)",
+        )
         .option("-s, --tls", "Enable HTTPS with TLS")
         .option("-c, --invite-code <inviteCode>", "Invite code (optional)")
         .option("-e, --env <env>", "Path to your env file")
@@ -78,7 +89,10 @@ async function main() {
         .option("-p, --persistence", "Enable filesystem persistence")
         .option("-a, --private", "Enable private mode")
         .option("-u, --upgradeability", "Enable SecretVM upgradeability")
-        .option("-f, --platform <sev|tdx>", "AMD SEV-SNP (sev) or Intel TDX (tdx) (default)")
+        .option(
+            "-f, --platform <sev|tdx>",
+            "AMD SEV-SNP (sev) or Intel TDX (tdx) (default)",
+        )
         .option(
             "-l, --docker-credentials <dockerCredentials>",
             "Credentials for private docker registries (username:password)",

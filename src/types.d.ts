@@ -57,6 +57,20 @@ export interface VmInstance {
     secret_fs_persistent?: boolean;
 }
 
+export interface Template {
+    id: string;
+    name: string;
+    description: string;
+    instructions: string;
+    tags: string[];
+    submittedBy: string;
+    link: string;
+    docker: string;
+    defaultVmSize: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export type CreateVmApiResponse = VmInstance;
 
 export interface StopVmApiResponse {
@@ -121,6 +135,7 @@ export interface CreateVmCommandOptions {
     name?: string;
     type?: string;
     dockerCompose?: string;
+    template?: string;
     inviteCode?: string;
     tls?: boolean;
     env?: string;

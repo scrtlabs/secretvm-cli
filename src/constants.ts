@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
     },
     VM: {
         INSTANCES: "/api/vm/instances",
+        TEMPLATES: "/api/templates",
         CREATE: "/api/vm/create",
         DETAILS: (vmId: string) => `/api/vm/${vmId}`,
         STOP: (vmId: string) => `/api/vm/${vmId}/stop`,

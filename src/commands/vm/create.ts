@@ -8,6 +8,7 @@ import {
     GlobalOptions,
     CreateVmCommandOptions,
     DockerCompose,
+    Template,
 } from "../../types";
 import { handleCommandExecution, successResponse } from "../../utils";
 import Table from "cli-table3";
@@ -23,6 +24,7 @@ export async function createVmCommand(
     let name = cmdOptions.name;
     let type = cmdOptions.type;
     let dockerComposePath = cmdOptions.dockerCompose;
+    let templateId = cmdOptions.template;
     let inviteCode = cmdOptions.inviteCode;
     let enableHttps = cmdOptions.tls ?? false;
     let domain = cmdOptions.domain;
@@ -33,6 +35,9 @@ export async function createVmCommand(
     let privateMode = cmdOptions.private ?? false;
     let upgradeability = cmdOptions.upgradeability;
     let secrets_plaintext: string | undefined;
+    let dockerComposeContent: string | undefined;
+    let dockerComposeFilename: string = "docker-compose.yml";
+
     if (cmdOptions.env) {
         try {
             const envPath = path.resolve(cmdOptions.env);
@@ -48,6 +53,189 @@ export async function createVmCommand(
     await handleCommandExecution(
         globalOptions,
         async (): Promise<AxiosResponse> => {
+            const apiClient = await getApiClient(globalOptions);
+
+            // Logic to determine Docker content source: File vs Template
+            if (globalOptions.interactive) {
+                // If neither is provided, ask the user
+                if (!dockerComposePath && !templateId) {
+                    const { source } = await inquirer.prompt([
+                        {
+                            type: "list",
+                            name: "source",
+                            message: "How would you like to define your VM?",
+                            choices: [
+                                {
+                                    name: "Use a local docker-compose.yml file",
+                                    value: "file",
+                                },
+                                {
+                                    name: "Select a Template",
+                                    value: "template",
+                                },
+                            ],
+                        },
+                    ]);
+
+                    if (source === "template") {
+                        console.log("Fetching templates...");
+                        const templatesResponse = await apiClient.get<
+                            Template[]
+                        >(API_ENDPOINTS.VM.TEMPLATES);
+                        const templates = templatesResponse.data;
+
+                        if (!templates || templates.length === 0) {
+                            console.log(
+                                "No templates available. Switching to file mode.",
+                            );
+                        } else {
+                            const choices = templates.map((t) => ({
+                                name: `${t.name} (${t.description}) [${t.defaultVmSize}]`,
+                                value: t,
+                            }));
+                            const { selectedTemplate } = await inquirer.prompt([
+                                {
+                                    type: "list",
+                                    name: "selectedTemplate",
+                                    message: "Choose a template:",
+                                    choices: choices,
+                                },
+                            ]);
+                            templateId = selectedTemplate.id;
+                            dockerComposeContent = selectedTemplate.docker;
+                            if (!type) {
+                                type = selectedTemplate.defaultVmSize;
+                            }
+                            if (!name) {
+                                name = selectedTemplate.name
+                                    .toLowerCase()
+                                    .replace(/\s+/g, "-");
+                            }
+                        }
+                    } else {
+                        const answers = await inquirer.prompt([
+                            {
+                                type: "input",
+                                name: "dockerComposePath",
+                                message:
+                                    "Enter the path to your docker-compose.yml or similar config file:",
+                                validate: (input: string) => {
+                                    const trimmedInput = input.trim();
+                                    if (trimmedInput === "")
+                                        return "Path cannot be empty.";
+                                    try {
+                                        const resolvedPath =
+                                            path.resolve(trimmedInput);
+                                        fs.accessSync(
+                                            resolvedPath,
+                                            fs.constants.R_OK,
+                                        );
+                                        return true;
+                                    } catch (err) {
+                                        return `File "${trimmedInput}" does not exist or is not readable.`;
+                                    }
+                                },
+                            },
+                        ]);
+                        dockerComposePath = answers.dockerComposePath;
+                    }
+                }
+            }
+
+            // If template ID is provided (via flag or interactive selection)
+            if (templateId && !dockerComposeContent) {
+                const templatesResponse = await apiClient.get<Template[]>(
+                    API_ENDPOINTS.VM.TEMPLATES,
+                );
+                const templates = templatesResponse.data;
+                const selectedTemplate = templates.find(
+                    (t) => t.id === templateId || t.name === templateId,
+                );
+                if (!selectedTemplate) {
+                    throw new Error(
+                        `Template with ID or name "${templateId}" not found.`,
+                    );
+                }
+                dockerComposeContent = selectedTemplate.docker;
+                if (!type) {
+                    type = selectedTemplate.defaultVmSize;
+                }
+            }
+
+            // If still no content, assume file path
+            if (!dockerComposeContent) {
+                if (!dockerComposePath) {
+                    throw new Error(
+                        "Missing required option: -d, --docker-compose or -T, --template",
+                    );
+                }
+                const absoluteDockerComposePath = path.resolve(
+                    dockerComposePath!.trim(),
+                );
+                const fileBuffer = fs.readFileSync(absoluteDockerComposePath);
+                dockerComposeContent = fileBuffer.toString();
+                dockerComposeFilename = path.basename(
+                    absoluteDockerComposePath,
+                );
+            }
+
+            // Basic check for missing env vars in templates
+            if (dockerComposeContent) {
+                const envVarMatches = dockerComposeContent.matchAll(
+                    /\$\{?([A-Z0-9_]+)(?::-[^}]*)?\}?/g,
+                );
+                const neededVars = new Set<string>();
+                for (const match of envVarMatches) {
+                    // Ignore DOMAIN_NAME as it's typically handled dynamically by portal
+                    if (match[1] !== "DOMAIN_NAME") {
+                        neededVars.add(match[1]);
+                    }
+                }
+
+                if (neededVars.size > 0 && !secrets_plaintext) {
+                    if (globalOptions.interactive) {
+                        const { proceed } = await inquirer.prompt([
+                            {
+                                type: "confirm",
+                                name: "proceed",
+                                message: `⚠️  The selected configuration appears to use environment variables (${Array.from(neededVars).join(", ")}), but no environment file was provided.\nDo you have an env file to upload?`,
+                                default: true,
+                            },
+                        ]);
+
+                        if (proceed) {
+                            const { envPath } = await inquirer.prompt([
+                                {
+                                    type: "input",
+                                    name: "envPath",
+                                    message:
+                                        "Enter the path to your .env file:",
+                                    validate: (input: string) => {
+                                        try {
+                                            fs.accessSync(
+                                                path.resolve(input),
+                                                fs.constants.R_OK,
+                                            );
+                                            return true;
+                                        } catch (e) {
+                                            return "File not readable";
+                                        }
+                                    },
+                                },
+                            ]);
+                            secrets_plaintext = fs.readFileSync(
+                                path.resolve(envPath),
+                                "utf-8",
+                            );
+                        }
+                    } else {
+                        console.warn(
+                            `⚠️  Warning: Your configuration contains environment variables (${Array.from(neededVars).join(", ")}), but no --env file was provided. Ensure your template defaults handle this or provide an .env file.`,
+                        );
+                    }
+                }
+            }
+
             if (globalOptions.interactive) {
                 if (!name) {
                     const answers = await inquirer.prompt([
@@ -75,60 +263,6 @@ export async function createVmCommand(
                         },
                     ]);
                     type = answers.vmTypeId;
-                }
-                if (!dockerComposePath) {
-                    const answers = await inquirer.prompt([
-                        {
-                            type: "input",
-                            name: "dockerComposePath",
-                            message:
-                                "Enter the path to your docker-compose.yml or similar config file:",
-                            validate: (input: string) => {
-                                const trimmedInput = input.trim();
-                                if (trimmedInput === "")
-                                    return "Path cannot be empty.";
-                                try {
-                                    const resolvedPath =
-                                        path.resolve(trimmedInput);
-                                    fs.accessSync(
-                                        resolvedPath,
-                                        fs.constants.R_OK,
-                                    );
-                                    return true;
-                                } catch (err) {
-                                    return `File "${trimmedInput}" does not exist or is not readable.`;
-                                }
-                            },
-                        },
-                    ]);
-                    dockerComposePath = answers.dockerComposePath;
-                }
-
-                if (!secrets_plaintext) {
-                    const { addEnv } = await inquirer.prompt([
-                        {
-                            type: "confirm",
-                            name: "addEnv",
-                            message:
-                                "Do you want to add environment variables (secrets)?",
-                            default: false,
-                        },
-                    ]);
-
-                    if (addEnv) {
-                        const { secrets } = await inquirer.prompt([
-                            {
-                                type: "editor",
-                                name: "secrets",
-                                message:
-                                    "Enter variables in VAR=VALUE format (opens in your default editor).",
-                                validate: (text: string) =>
-                                    text.trim().length > 0 ||
-                                    "Secrets cannot be empty.",
-                            },
-                        ]);
-                        secrets_plaintext = secrets;
-                    }
                 }
 
                 if (!inviteCode) {
@@ -256,19 +390,11 @@ export async function createVmCommand(
                 if (!type) {
                     throw new Error("Missing required option: -t, --type");
                 }
-                if (!dockerComposePath) {
-                    throw new Error(
-                        "Missing required option: -d, --docker-compose",
-                    );
-                }
-                if (platform && !(["sev", "tdx"].includes(platform))) {
-                    throw new Error(
-                        "Platform should be either sev or tdx",
-                    );
+                if (platform && !["sev", "tdx"].includes(platform)) {
+                    throw new Error("Platform should be either sev or tdx");
                 }
             }
 
-            const apiClient = await getApiClient(globalOptions);
             const formData = new FormData();
 
             formData.append("name", name!.trim());
@@ -315,14 +441,9 @@ export async function createVmCommand(
                 }
             }
 
-            const absoluteDockerComposePath = path.resolve(
-                dockerComposePath!.trim(),
-            );
-            const fileBuffer = fs.readFileSync(absoluteDockerComposePath);
-            let dockerComposeContent = fileBuffer.toString();
             if (enableHttps) {
                 const dockerCompose = yaml.load(
-                    dockerComposeContent,
+                    dockerComposeContent!,
                 ) as DockerCompose;
 
                 // Create traefik network if it doesn't exist
@@ -400,7 +521,7 @@ export async function createVmCommand(
             formData.append(
                 "dockercompose",
                 dockerComposeContent,
-                path.basename(absoluteDockerComposePath),
+                dockerComposeFilename,
             );
 
             if (fsPersistence) {
