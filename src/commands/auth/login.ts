@@ -1,6 +1,5 @@
 import http from "http";
 import { URLSearchParams } from "url";
-import open from "open";
 import { Cookie, CookieJar } from "tough-cookie";
 import { saveSession, SERVER_BASE_URL } from "../../services/apiClient";
 import { GlobalOptions } from "../../types";
@@ -92,8 +91,7 @@ export async function loginCommand(
                     }
                 });
 
-                // Start listening on a random available port
-                server.listen(0, () => {
+                server.listen(0, async () => {
                     const port = (server.address() as import("net").AddressInfo)
                         .port;
                     console.info(
@@ -109,7 +107,15 @@ export async function loginCommand(
                     console.info("Opening your browser to complete login...");
                     console.debug(`Login URL: ${loginUrl}`);
 
-                    open(loginUrl);
+                    try {
+                        const { default: open } = await import("open");
+                        await open(loginUrl);
+                    } catch (err) {
+                        console.error("Failed to open browser:", err);
+                        console.log(
+                            `Please open this URL manually: ${loginUrl}`,
+                        );
+                    }
                 });
 
                 server.on("error", (err) => {
