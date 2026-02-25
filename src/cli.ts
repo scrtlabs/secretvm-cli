@@ -94,6 +94,10 @@ async function main() {
             "AMD SEV-SNP (sev) or Intel TDX (tdx) (default)",
         )
         .option(
+            "-E, --environment <env>",
+            "Deployment environment (dev or prod)",
+        )
+        .option(
             "-l, --docker-credentials <dockerCredentials>",
             "Credentials for private docker registries (username:password)",
         )

@@ -34,6 +34,7 @@ export async function createVmCommand(
     let platform = cmdOptions.platform;
     let privateMode = cmdOptions.private ?? false;
     let upgradeability = cmdOptions.upgradeability;
+    let environment = cmdOptions.environment;
     let secrets_plaintext: string | undefined;
     let dockerComposeContent: string | undefined;
     let dockerComposeFilename: string = "docker-compose.yml";
@@ -265,6 +266,22 @@ export async function createVmCommand(
                     type = answers.vmTypeId;
                 }
 
+                if (!environment) {
+                    const { envChoice } = await inquirer.prompt([
+                        {
+                            type: "list",
+                            name: "envChoice",
+                            message: "Select deployment environment:",
+                            choices: [
+                                { name: "Development (dev)", value: "dev" },
+                                { name: "Production (prod)", value: "prod" },
+                            ],
+                            default: "dev",
+                        },
+                    ]);
+                    environment = envChoice;
+                }
+
                 if (!inviteCode) {
                     const answers = await inquirer.prompt([
                         {
@@ -393,12 +410,25 @@ export async function createVmCommand(
                 if (platform && !["sev", "tdx"].includes(platform)) {
                     throw new Error("Platform should be either sev or tdx");
                 }
+                if (environment && !["dev", "prod"].includes(environment)) {
+                    throw new Error(
+                        "Environment must be either 'dev' or 'prod'.",
+                    );
+                }
+            }
+
+            if (!environment) {
+                environment = "prod";
             }
 
             const formData = new FormData();
 
             formData.append("name", name!.trim());
             formData.append("vmTypeId", type!.trim());
+
+            if (environment) {
+                formData.append("environment", environment);
+            }
 
             if (inviteCode && inviteCode.trim() !== "") {
                 formData.append("inviteCode", inviteCode.trim());

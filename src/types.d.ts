@@ -146,6 +146,7 @@ export interface CreateVmCommandOptions {
     upgradeability?: boolean;
     private?: boolean;
     platform?: string;
+    environment?: string;
 }
 
 export interface EditVmCommandOptions {
@@ -163,4 +164,19 @@ export interface DockerCompose {
         [key: string]: Service;
     };
     networks?: Networks;
+}
+
+interface Service {
+    image?: string;
+    command?: string[];
+    ports?: string[];
+    volumes?: string[];
+    networks?: string[] | { [key: string]: any };
+    labels?: { [key: string]: string };
+    environment?: { [key: string]: string } | string[];
+    [key: string]: any;
+}
+
+interface Networks {
+    [key: string]: any;
 }
