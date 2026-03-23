@@ -109,6 +109,10 @@ async function main() {
             "-A, --archive <archivePath>",
             "Path to a .tar archive with additional files",
         )
+        .option(
+            "-K, --kms <kmsType>",
+            "Type of KMS to use (secret, dstack, google)",
+        )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });

@@ -39,6 +39,7 @@ export async function createVmCommand(
     let dockerComposeContent: string | undefined;
     let dockerComposeFilename: string = "docker-compose.yml";
     let archive = cmdOptions.archive;
+    let kms = cmdOptions.kms;
 
     if (cmdOptions.env) {
         try {
@@ -435,6 +436,26 @@ export async function createVmCommand(
                         archive = archivePath;
                     }
                 }
+
+                if (fsPersistence && !kms) {
+                    const { kmsChoice } = await inquirer.prompt([
+                        {
+                            type: "list",
+                            name: "kmsChoice",
+                            message: "Select KMS type:",
+                            choices: [
+                                {
+                                    name: "Secret Network KMS",
+                                    value: "contract",
+                                },
+                                { name: "dstack KMS", value: "dstack" },
+                                { name: "Google KMS", value: "GKMS" },
+                            ],
+                            default: "contract",
+                        },
+                    ]);
+                    kms = kmsChoice;
+                }
             } else {
                 if (!name) {
                     throw new Error("Missing required option: -n, --name");
@@ -617,6 +638,10 @@ export async function createVmCommand(
                     dockerFilesContent,
                     dockerFilesFilename,
                 );
+            }
+
+            if (kms) {
+                formData.append("kms_provider", kms);
             }
             return await apiClient.post<CreateVmApiResponse>(
                 API_ENDPOINTS.VM.CREATE,

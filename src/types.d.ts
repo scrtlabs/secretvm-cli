@@ -148,6 +148,7 @@ export interface CreateVmCommandOptions {
     platform?: string;
     environment?: string;
     archive?: string;
+    kms?: string;
 }
 
 export interface EditVmCommandOptions {
