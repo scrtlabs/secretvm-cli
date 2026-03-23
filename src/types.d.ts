@@ -149,6 +149,8 @@ export interface CreateVmCommandOptions {
     environment?: string;
     archive?: string;
     kms?: string;
+    eip8004RegistrationJson?: string;
+    eip8004Chain?: string;
 }
 
 export interface EditVmCommandOptions {

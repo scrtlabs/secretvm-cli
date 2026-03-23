@@ -113,6 +113,14 @@ async function main() {
             "-K, --kms <kmsType>",
             "Type of KMS to use (secret, dstack, google)",
         )
+        .option(
+            "--eip8004-registration-json <jsonPath>",
+            "Path to EIP8004 registration JSON file",
+        )
+        .option(
+            "--eip8004-chain <chainName>",
+            "Chain to use for EIP8004 registration (supported: base-mainnet)",
+        )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });

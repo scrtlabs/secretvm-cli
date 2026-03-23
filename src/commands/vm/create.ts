@@ -40,6 +40,8 @@ export async function createVmCommand(
     let dockerComposeFilename: string = "docker-compose.yml";
     let archive = cmdOptions.archive;
     let kms = cmdOptions.kms;
+    let registrationJson = cmdOptions.eip8004RegistrationJson;
+    let chain = cmdOptions.eip8004Chain;
 
     if (cmdOptions.env) {
         try {
@@ -142,6 +144,15 @@ export async function createVmCommand(
                         ]);
                         dockerComposePath = answers.dockerComposePath;
                     }
+                }
+            }
+
+            if (chain) {
+                const supportedChains = ["base-mainnet"];
+                if (!supportedChains.includes(chain)) {
+                    throw new Error(
+                        `Unsupported chain: "${chain}". Currently supported chains: ${supportedChains.join(", ")}`,
+                    );
                 }
             }
 
@@ -456,6 +467,53 @@ export async function createVmCommand(
                     ]);
                     kms = kmsChoice;
                 }
+
+                if (!registrationJson) {
+                    const { provideRegistration } = await inquirer.prompt([
+                        {
+                            type: "confirm",
+                            name: "provideRegistration",
+                            message:
+                                "Do you want to provide an 8004 registration JSON?",
+                            default: false,
+                        },
+                    ]);
+                    if (provideRegistration) {
+                        const answers = await inquirer.prompt([
+                            {
+                                type: "input",
+                                name: "jsonPath",
+                                message: "Enter path to registration JSON:",
+                                validate: (input: string) => {
+                                    try {
+                                        fs.accessSync(
+                                            path.resolve(input),
+                                            fs.constants.R_OK,
+                                        );
+                                        return true;
+                                    } catch (e) {
+                                        return "File not found or not readable";
+                                    }
+                                },
+                            },
+                            {
+                                type: "list",
+                                name: "chainSelection",
+                                message:
+                                    "Select the chain for EIP-8004 registration:",
+                                choices: [
+                                    {
+                                        name: "Base Mainnet",
+                                        value: "base-mainnet",
+                                    },
+                                ],
+                                default: "base-mainnet",
+                            },
+                        ]);
+                        registrationJson = answers.jsonPath;
+                        chain = answers.chainSelection;
+                    }
+                }
             } else {
                 if (!name) {
                     throw new Error("Missing required option: -n, --name");
@@ -643,6 +701,60 @@ export async function createVmCommand(
             if (kms) {
                 formData.append("kms_provider", kms);
             }
+
+            if (registrationJson) {
+                const absoluteJsonPath = path.resolve(registrationJson.trim());
+                const rawJson = fs.readFileSync(absoluteJsonPath, "utf-8");
+                let parsedJson: any;
+
+                try {
+                    parsedJson = JSON.parse(rawJson);
+                } catch (e) {
+                    throw new Error(
+                        "The provided registration JSON file contains invalid JSON.",
+                    );
+                }
+
+                if (chain) {
+                    parsedJson.chain = chain.trim();
+                }
+
+                if (!Array.isArray(parsedJson.services)) {
+                    parsedJson.services = [];
+                }
+
+                const hasTeequote = parsedJson.services.some(
+                    (s: any) => s.name === "teequote",
+                );
+                const hasWorkload = parsedJson.services.some(
+                    (s: any) => s.name === "workload",
+                );
+
+                const baseUrl = "https://$DOMAIN_NAME:29343";
+
+                if (!hasTeequote) {
+                    parsedJson.services.push({
+                        name: "teequote",
+                        endpoint: `${baseUrl}/cpu`,
+                        description: "TEE Quote Service",
+                    });
+                }
+
+                if (!hasWorkload) {
+                    parsedJson.services.push({
+                        name: "workload",
+                        endpoint: `${baseUrl}/docker-compose`,
+                        description: "Workload Service",
+                    });
+                }
+
+                const modifiedRegistrationJson = JSON.stringify(parsedJson);
+                formData.append(
+                    "eip8004_registration",
+                    modifiedRegistrationJson,
+                );
+            }
+
             return await apiClient.post<CreateVmApiResponse>(
                 API_ENDPOINTS.VM.CREATE,
                 formData,
