@@ -38,6 +38,7 @@ export async function createVmCommand(
     let secrets_plaintext: string | undefined;
     let dockerComposeContent: string | undefined;
     let dockerComposeFilename: string = "docker-compose.yml";
+    let archive = cmdOptions.archive;
 
     if (cmdOptions.env) {
         try {
@@ -400,6 +401,40 @@ export async function createVmCommand(
                     ]);
                     upgradeability = enableUpgradeability;
                 }
+                if (!archive) {
+                    const { provideArchive } = await inquirer.prompt([
+                        {
+                            type: "confirm",
+                            name: "provideArchive",
+                            message:
+                                "Do you want to provide a .tar archive with additional files?",
+                            default: false,
+                        },
+                    ]);
+                    if (provideArchive) {
+                        const { archivePath } = await inquirer.prompt([
+                            {
+                                type: "input",
+                                name: "archivePath",
+                                message: "Enter path to .tar archive:",
+                                validate: (input: string) => {
+                                    try {
+                                        if (!input.endsWith(".tar"))
+                                            return "File must be a .tar archive";
+                                        fs.accessSync(
+                                            path.resolve(input),
+                                            fs.constants.R_OK,
+                                        );
+                                        return true;
+                                    } catch (e) {
+                                        return "File not found or not readable";
+                                    }
+                                },
+                            },
+                        ]);
+                        archive = archivePath;
+                    }
+                }
             } else {
                 if (!name) {
                     throw new Error("Missing required option: -n, --name");
@@ -570,6 +605,19 @@ export async function createVmCommand(
                 formData.append("upgradeability", "1");
             }
 
+            if (archive) {
+                const absoluteArchivePath = path.resolve(archive.trim());
+                const dockerFilesFilename = path.basename(absoluteArchivePath);
+                const dockerFilesContent = fs
+                    .readFileSync(absoluteArchivePath)
+                    .toString();
+
+                formData.append(
+                    "dockerfiles",
+                    dockerFilesContent,
+                    dockerFilesFilename,
+                );
+            }
             return await apiClient.post<CreateVmApiResponse>(
                 API_ENDPOINTS.VM.CREATE,
                 formData,

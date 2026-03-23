@@ -147,6 +147,7 @@ export interface CreateVmCommandOptions {
     private?: boolean;
     platform?: string;
     environment?: string;
+    archive?: string;
 }
 
 export interface EditVmCommandOptions {

@@ -105,6 +105,10 @@ async function main() {
             "-r, --docker-registry <dockerRegistry>",
             "Docker registry where your private image is hosted (default: docker.io)",
         )
+        .option(
+            "-A, --archive <archivePath>",
+            "Path to a .tar archive with additional files",
+        )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });
