@@ -12,10 +12,11 @@ import {
 } from "../../types";
 import { handleCommandExecution, successResponse } from "../../utils";
 import Table from "cli-table3";
-import { API_ENDPOINTS } from "../../constants";
+import { API_ENDPOINTS, KMS_CONTRACT_PUBLIC_KEY } from "../../constants";
 import { AxiosResponse } from "axios";
 import yaml from "js-yaml";
 import { encryptDockerCredentials } from "../../services/encryption";
+import { encryptForKmsContract } from "../../services/kmsEncryption";
 
 export async function createVmCommand(
     cmdOptions: CreateVmCommandOptions,
@@ -549,7 +550,15 @@ export async function createVmCommand(
             }
 
             if (secrets_plaintext && secrets_plaintext.trim() !== "") {
-                formData.append("secrets_plaintext", secrets_plaintext.trim());
+                if (kms === "contract") {
+                    const secretsCipher = await encryptForKmsContract(
+                        secrets_plaintext.trim(),
+                        KMS_CONTRACT_PUBLIC_KEY,
+                    );
+                    formData.append("secrets_cipher", secretsCipher);
+                } else {
+                    formData.append("secrets_plaintext", secrets_plaintext.trim());
+                }
             }
 
             if (domain && domain.trim() !== "") {
@@ -566,20 +575,30 @@ export async function createVmCommand(
                         );
                     }
 
-                    const encryptedCredentials = await encryptDockerCredentials(
-                        dockerRegistry,
-                        username,
-                        password,
-                    );
-
-                    formData.append(
-                        "docker_credentials_encrypted",
-                        encryptedCredentials.encryptedData,
-                    );
-                    formData.append(
-                        "docker_credentials_key",
-                        encryptedCredentials.encryptedAESKey,
-                    );
+                    if (kms === "contract") {
+                        const cipher = await encryptForKmsContract(
+                            password,
+                            KMS_CONTRACT_PUBLIC_KEY,
+                        );
+                        formData.append("kms_docker_username", username);
+                        formData.append("kms_docker_cipher", cipher);
+                        formData.append("kms_docker_repository", dockerRegistry);
+                    } else {
+                        const encryptedCredentials =
+                            await encryptDockerCredentials(
+                                dockerRegistry,
+                                username,
+                                password,
+                            );
+                        formData.append(
+                            "docker_credentials_encrypted",
+                            encryptedCredentials.encryptedData,
+                        );
+                        formData.append(
+                            "docker_credentials_key",
+                            encryptedCredentials.encryptedAESKey,
+                        );
+                    }
                 } else {
                     throw new Error("Docker registry cannot be empty.");
                 }
@@ -699,7 +718,9 @@ export async function createVmCommand(
             }
 
             if (kms) {
-                formData.append("kms_provider", kms);
+                // Map CLI value 'contract' to the server-side value 'secret-network'
+                const kmsProviderValue = kms === "contract" ? "secret-network" : kms;
+                formData.append("kms_provider", kmsProviderValue);
             }
 
             if (registrationJson) {

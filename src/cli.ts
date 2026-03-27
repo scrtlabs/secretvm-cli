@@ -146,6 +146,10 @@ async function main() {
             "-r, --docker-registry <dockerRegistry>",
             "Docker registry where your private image is hosted (default: docker.io)",
         )
+        .option(
+            "-K, --kms <kmsType>",
+            "KMS type for encrypting secrets/credentials (contract = Secret Network)",
+        )
         .action(async (vmId: string, cmdOptions) => {
             await editVmCommand(
                 vmId,
