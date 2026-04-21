@@ -1,10 +1,12 @@
-# Upgrades-by-default for new VMs + startup animation
+# Upgrades-by-default for new VMs + startup animation + list-vms text fix
 
 ## Context
 
 `secretvm-cli vm create` currently creates VMs with upgradeability disabled unless the user opts in via `-u, --upgradeability` (non-interactive) or answers "yes" to the interactive prompt (which defaults to "no"). We want new VMs to be upgradeable by default, so users must now opt **out** instead of opting in.
 
 Separately, when the wizard finishes collecting input and the CLI posts to the create-VM endpoint, there's currently no visible feedback — the terminal just sits there until the server responds. We want a simple spinner + "Starting..." text to show the CLI is still working.
+
+Also, the success message after VM creation tells the user to run `list-vms`, but that command doesn't exist — the correct command is `vm list`. We'll fix the wording.
 
 ## Goals
 
@@ -13,6 +15,7 @@ Separately, when the wizard finishes collecting input and the CLI posts to the c
 - The existing `-u, --upgradeability` flag is kept as a silent no-op so existing scripts and documentation don't break.
 - Interactive and non-interactive modes behave consistently — the default is "on" in both.
 - While the create-VM request is in flight in interactive mode, show a simple ASCII spinner with the text "Starting...".
+- Fix the post-creation success message to reference the correct command name (`vm list` instead of `list-vms`).
 
 ## Non-goals
 
@@ -78,6 +81,18 @@ A small inline spinner utility, implemented with `setInterval`. No new dependenc
   This guarantees the spinner is cleared whether the request succeeds or errors.
 - The spinner starts *after* all interactive prompts have completed (i.e., right before the HTTP call), not during form assembly.
 
+### Success message wording (`src/commands/vm/create.ts`)
+
+In the interactive success handler, change:
+
+> `You can check the VM status using the "list-vms" command shortly.`
+
+to:
+
+> `You can check the VM status using the "vm list" command shortly.`
+
+No other message text changes.
+
 ## Testing
 
 This project does not currently have a test suite for `vm create`. Verification will be manual:
@@ -90,6 +105,7 @@ This project does not currently have a test suite for `vm create`. Verification 
 6. `secretvm-cli vm create` (interactive, TTY) → after all prompts, spinner shows `<frame> Starting...` until server responds, then clears cleanly before the result table prints.
 7. `secretvm-cli vm create ... --non-interactive` → no spinner, JSON output unchanged.
 8. Spinner output piped to a file → no spinner characters written (isTTY guard).
+9. `secretvm-cli vm create` (interactive) success output → references the `vm list` command (not `list-vms`).
 
 Verification can be done against a staging backend or by inspecting the outgoing `FormData` with a local proxy / console log if needed.
 
