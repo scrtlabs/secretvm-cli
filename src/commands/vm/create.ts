@@ -16,6 +16,7 @@ import { API_ENDPOINTS } from "../../constants";
 import { AxiosResponse } from "axios";
 import yaml from "js-yaml";
 import { encryptDockerCredentials } from "../../services/encryption";
+import { startSpinner } from "../../spinner";
 
 export async function createVmCommand(
     cmdOptions: CreateVmCommandOptions,
@@ -33,7 +34,7 @@ export async function createVmCommand(
     let fsPersistence = cmdOptions.persistence;
     let platform = cmdOptions.platform;
     let privateMode = cmdOptions.private ?? false;
-    let upgradeability = cmdOptions.upgradeability;
+    let upgradeability = !cmdOptions.disableUpgrades;
     let environment = cmdOptions.environment;
     let secrets_plaintext: string | undefined;
     let dockerComposeContent: string | undefined;
@@ -401,14 +402,14 @@ export async function createVmCommand(
                     ]);
                     privateMode = enablePrivateMode;
                 }
-                if (!upgradeability) {
+                if (!cmdOptions.disableUpgrades) {
                     const { enableUpgradeability } = await inquirer.prompt([
                         {
                             type: "confirm",
                             name: "enableUpgradeability",
                             message:
                                 "Do you want to enable SecretVM upgradeability?",
-                            default: false,
+                            default: true,
                         },
                     ]);
                     upgradeability = enableUpgradeability;
@@ -755,17 +756,24 @@ export async function createVmCommand(
                 );
             }
 
-            return await apiClient.post<CreateVmApiResponse>(
-                API_ENDPOINTS.VM.CREATE,
-                formData,
-                {
-                    headers: {
-                        ...formData.getHeaders(), // Necessary for multipart/form-data with boundary
+            const stopSpinner = globalOptions.interactive
+                ? startSpinner("Starting...")
+                : () => {};
+            try {
+                return await apiClient.post<CreateVmApiResponse>(
+                    API_ENDPOINTS.VM.CREATE,
+                    formData,
+                    {
+                        headers: {
+                            ...formData.getHeaders(), // Necessary for multipart/form-data with boundary
+                        },
+                        maxContentLength: Infinity, // Allow large file uploads
+                        maxBodyLength: Infinity, // Allow large file uploads
                     },
-                    maxContentLength: Infinity, // Allow large file uploads
-                    maxBodyLength: Infinity, // Allow large file uploads
-                },
-            );
+                );
+            } finally {
+                stopSpinner();
+            }
         },
         (data: AxiosResponse) => {
             if (globalOptions.interactive) {
@@ -795,7 +803,7 @@ export async function createVmCommand(
                     ]);
                     console.log(table.toString());
                     console.log(
-                        'You can check the VM status using the "list-vms" command shortly.',
+                        'You can check the VM status using the "vm list" command shortly.',
                     );
                 } else {
                     console.log(
