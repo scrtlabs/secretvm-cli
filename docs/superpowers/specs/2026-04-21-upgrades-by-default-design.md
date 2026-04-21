@@ -1,8 +1,10 @@
-# Upgrades-by-default for new VMs
+# Upgrades-by-default for new VMs + startup animation
 
 ## Context
 
 `secretvm-cli vm create` currently creates VMs with upgradeability disabled unless the user opts in via `-u, --upgradeability` (non-interactive) or answers "yes" to the interactive prompt (which defaults to "no"). We want new VMs to be upgradeable by default, so users must now opt **out** instead of opting in.
+
+Separately, when the wizard finishes collecting input and the CLI posts to the create-VM endpoint, there's currently no visible feedback — the terminal just sits there until the server responds. We want a simple spinner + "Starting..." text to show the CLI is still working.
 
 ## Goals
 
@@ -10,12 +12,15 @@
 - Users can opt out explicitly via a new `--disable-upgrades` flag.
 - The existing `-u, --upgradeability` flag is kept as a silent no-op so existing scripts and documentation don't break.
 - Interactive and non-interactive modes behave consistently — the default is "on" in both.
+- While the create-VM request is in flight in interactive mode, show a simple ASCII spinner with the text "Starting...".
 
 ## Non-goals
 
 - Changing the server-side API contract. The server still accepts the `upgradeability=1` form field as today; we just send it by default.
 - Deprecation messaging or warnings for the old `--upgradeability` flag. It remains silently accepted.
 - Changing behavior for any other `vm` subcommand.
+- Adding a spinner to non-interactive output (would corrupt the JSON written by `successResponse`).
+- Adding a new dependency. The spinner will be implemented inline with `setInterval`.
 
 ## Design
 
@@ -52,6 +57,27 @@ cmdOptions.disableUpgrades ─► (interactive?) ─► prompt (default yes) ─
                               └─► non-interactive: use directly ──────┘
 ```
 
+### Startup animation (interactive mode only)
+
+A small inline spinner utility, implemented with `setInterval`. No new dependency.
+
+- Frames: `|`, `/`, `-`, `\`. Frame advances every ~100ms.
+- Rendered as a single line: `<frame> Starting...`, rewritten in place via `\r` + clear-to-end-of-line.
+- Two exported helpers in a new file `src/spinner.ts` (sibling to the existing `src/utils.ts`):
+  - `startSpinner(text: string): () => void` — starts the animation, returns a `stop` function that clears the line and stops the interval.
+  - Internal handling: if `process.stdout.isTTY` is false, `startSpinner` is a no-op (returns a stop that also does nothing). This keeps CI logs and piped output clean.
+- In `createVmCommand`, wrap the `apiClient.post(...)` call in interactive mode:
+  ```
+  const stop = globalOptions.interactive ? startSpinner("Starting...") : () => {};
+  try {
+      return await apiClient.post(...);
+  } finally {
+      stop();
+  }
+  ```
+  This guarantees the spinner is cleared whether the request succeeds or errors.
+- The spinner starts *after* all interactive prompts have completed (i.e., right before the HTTP call), not during form assembly.
+
 ## Testing
 
 This project does not currently have a test suite for `vm create`. Verification will be manual:
@@ -61,6 +87,9 @@ This project does not currently have a test suite for `vm create`. Verification 
 3. `secretvm-cli vm create --non-interactive ... --upgradeability` → server receives `upgradeability=1` (unchanged from today's outcome, flag is a no-op).
 4. `secretvm-cli vm create` (interactive) → upgradeability prompt defaults to "yes".
 5. `secretvm-cli vm create --disable-upgrades` (interactive) → prompt is skipped; VM is created without upgradeability.
+6. `secretvm-cli vm create` (interactive, TTY) → after all prompts, spinner shows `<frame> Starting...` until server responds, then clears cleanly before the result table prints.
+7. `secretvm-cli vm create ... --non-interactive` → no spinner, JSON output unchanged.
+8. Spinner output piped to a file → no spinner characters written (isTTY guard).
 
 Verification can be done against a staging backend or by inspecting the outgoing `FormData` with a local proxy / console log if needed.
 
