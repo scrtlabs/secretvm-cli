@@ -144,6 +144,7 @@ export interface CreateVmCommandOptions {
     dockerRegistry?: string;
     persistence?: boolean;
     upgradeability?: boolean;
+    disableUpgrades?: boolean;
     private?: boolean;
     platform?: string;
     environment?: string;

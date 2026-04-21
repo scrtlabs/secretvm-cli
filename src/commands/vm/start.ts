@@ -40,7 +40,7 @@ export async function startVmCommand(
                     }
                     console.log("------------------------------------------");
                     console.log(
-                        `VM ID "${trimmedVmId}" is being started. Use "list-vms" to check its status shortly.`,
+                        `VM ID "${trimmedVmId}" is being started. Use "vm list" to check its status shortly.`,
                     );
                 } else {
                     console.log(

@@ -93,6 +93,10 @@ async function main() {
         .option("-a, --private", "Enable private mode")
         .option("-u, --upgradeability", "Enable SecretVM upgradeability")
         .option(
+            "--disable-upgrades",
+            "Disable SecretVM upgradeability for this VM",
+        )
+        .option(
             "-f, --platform <sev|tdx>",
             "AMD SEV-SNP (sev) or Intel TDX (tdx) (default)",
         )
