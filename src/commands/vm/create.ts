@@ -302,7 +302,7 @@ export async function createVmCommand(
                             type: "input",
                             name: "inviteCode",
                             message:
-                                "Enter invite code (optional, press Enter if not needed):",
+                                "Enter invite code (optional, press Enter to skip):",
                         },
                     ]);
                     inviteCode = answers.inviteCode;
@@ -324,7 +324,7 @@ export async function createVmCommand(
                         {
                             type: "input",
                             name: "domain",
-                            message: "Enter your custom domain (FQDN):",
+                            message: "Enter custom domain (optional, press Enter for default):",
                         },
                     ]);
                     domain = answers.domain;

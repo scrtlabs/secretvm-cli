@@ -33,7 +33,7 @@ export async function stopVmCommand(
                     }
                     console.log("------------------------------------------");
                     console.log(
-                        `VM ID "${trimmedVmId}" is being stopped. Use "list-vms" to check its status.`,
+                        `VM ID "${trimmedVmId}" is being stopped. Use "vm list" to check its status.`,
                     );
                 } else {
                     console.log(
