@@ -11,6 +11,4 @@ export { startVmCommand } from "./vm/start";
 export { vmStatusCommand } from "./vm/status";
 export { editVmCommand } from "./vm/edit";
 export { listTemplatesCommand } from "./vm/templates";
-export { verifyQuoteCommand } from "./verify/quote";
-export { verifyWorkloadCommand } from "./verify/workload";
-export { verifyProofOfCloudCommand } from "./verify/proofOfCloud";
+export { verifyCommand } from "./verify/passthrough";
