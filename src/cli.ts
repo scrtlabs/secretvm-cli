@@ -15,9 +15,7 @@ import {
     vmStatusCommand,
     editVmCommand,
     listTemplatesCommand,
-    verifyQuoteCommand,
-    verifyWorkloadCommand,
-    verifyProofOfCloudCommand,
+    verifyCommand,
 } from "./commands";
 import { GlobalOptions } from "./types";
 import pkg from "../package.json";
@@ -201,84 +199,25 @@ async function main() {
         });
     program.addCommand(vmCommands);
 
-    const verifyCommands = new Command("verify").description(
-        "Verification helpers (quote, workload, proof-of-cloud)",
-    );
-    verifyCommands
-        .command("quote")
-        .description("Verify a SecretVM quote")
-        .option("--quote <quote>", "Quote string (hex for TDX, base64 for SEV)")
-        .option("--quote-file <path>", "Path to a quote file")
-        .option("--vm-id <vmId>", "Fetch the quote from a VM ID")
+    program
+        .command("verify")
+        .description("Verify attestation (passthrough to secretvm-verify)")
         .option(
-            "--attestation-type <auto|tdx|sev>",
-            "Override attestation type detection",
+            "--vm-id <vmId>",
+            "Resolve VM ID to hostname via portal before forwarding",
         )
-        .option(
-            "--environment <production|preview>",
-            "Portal environment for verification",
-        )
-        .option("--base-url <url>", "Custom base URL for verification")
+        .allowUnknownOption(true)
+        .allowExcessArguments(true)
+        .helpOption(false)
         .action(async (cmdOptions) => {
-            await verifyQuoteCommand(
-                cmdOptions,
-                program.opts() as GlobalOptions,
-            );
+            await verifyCommand(cmdOptions, program.opts() as GlobalOptions);
         });
-    verifyCommands
-        .command("workload")
-        .description("Verify a docker-compose workload against a quote")
-        .option("--quote <quote>", "Quote string (hex for TDX, base64 for SEV)")
-        .option("--quote-file <path>", "Path to a quote file")
-        .option("--vm-id <vmId>", "Fetch the quote from a VM ID")
-        .option(
-            "-d, --docker-compose <path>",
-            "Path to docker-compose.yaml",
-        )
-        .option(
-            "--docker-files <path>",
-            "Path to docker files (used to compute dockerFilesSha256)",
-        )
-        .option("--docker-files-sha256 <sha>", "Docker files SHA-256")
-        .option(
-            "--attestation-type <auto|tdx|sev>",
-            "Override attestation type detection",
-        )
-        .option(
-            "--environment <production|preview>",
-            "Portal environment for verification",
-        )
-        .option("--base-url <url>", "Custom base URL for verification")
-        .action(async (cmdOptions) => {
-            await verifyWorkloadCommand(
-                cmdOptions,
-                program.opts() as GlobalOptions,
-            );
-        });
-    verifyCommands
-        .command("proof-of-cloud")
-        .alias("poc")
-        .description("Verify Proof of Cloud from a TDX quote (hex)")
-        .option("--quote <quoteHex>", "TDX quote hex string")
-        .option("--quote-file <path>", "Path to a quote file")
-        .option("--vm-id <vmId>", "Fetch the quote from a VM ID")
-        .option(
-            "--environment <production|preview>",
-            "Portal environment for verification",
-        )
-        .option("--base-url <url>", "Custom base URL for verification")
-        .action(async (cmdOptions) => {
-            await verifyProofOfCloudCommand(
-                cmdOptions,
-                program.opts() as GlobalOptions,
-            );
-        });
-    program.addCommand(verifyCommands);
 
     await program.parseAsync(process.argv);
 }
 
 main().catch((err) => {
-    console.error("Unhandled error in main execution:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Error: ${message}`);
     process.exit(1);
 });

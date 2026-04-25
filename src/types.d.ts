@@ -163,27 +163,8 @@ export interface EditVmCommandOptions {
     dockerRegistry?: string;
 }
 
-export interface VerifyQuoteCommandOptions {
-    quote?: string;
-    quoteFile?: string;
+export interface VerifyCommandOptions {
     vmId?: string;
-    attestationType?: string;
-    environment?: string;
-    baseUrl?: string;
-}
-
-export interface VerifyWorkloadCommandOptions extends VerifyQuoteCommandOptions {
-    dockerCompose?: string;
-    dockerFiles?: string;
-    dockerFilesSha256?: string;
-}
-
-export interface VerifyProofOfCloudCommandOptions {
-    quote?: string;
-    quoteFile?: string;
-    vmId?: string;
-    environment?: string;
-    baseUrl?: string;
 }
 
 export interface DockerCompose {
