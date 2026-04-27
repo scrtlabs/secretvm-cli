@@ -55,6 +55,7 @@ export interface VmInstance {
     host: HostInfo;
     docker_file?: string | null;
     secret_fs_persistent?: boolean;
+    kmsProvider?: string;
 }
 
 export interface Template {
@@ -161,6 +162,7 @@ export interface EditVmCommandOptions {
     persistence?: boolean;
     dockerCredentials?: string;
     dockerRegistry?: string;
+    kms?: string;
 }
 
 export interface VerifyQuoteCommandOptions {

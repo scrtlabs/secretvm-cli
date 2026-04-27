@@ -1,8 +1,7 @@
 import * as forge from "node-forge";
 import * as CryptoJS from "crypto-js";
 
-const publicKey = `
------BEGIN PUBLIC KEY-----
+const defaultPublicKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4oLWArYud2yi7PUYQp90
 5BfPHyklsEnZmOhceuinPjTiJd9yg5Ur3+91bRV2zigSK7jwqTK0IQCuTuGJRjWZ
 Hhg5QxJ5iwwgaY1DjSkNIj6doCGROtXR3BCDyVEnkWxoDSmX256Pv5UWtqiLENSz
@@ -10,8 +9,9 @@ iOT6vcmCce1AwPLMMVfEegTFDTKceqm8teyGgIKO3s9/WVKWYKxURXxCeKb535MN
 A6E5Cgopo/NxuHWCs3nZumXli3D3m3aXHyeoQwBgf7mI7TdwzKd5HMwcmN1khDi4
 WaQiiGeHEOIq3yUhV9jF4gNSBlzmPMmIFlzdTGmiOVTmoVQ8a5stGReFvTFMRAbr
 OQIDAQAB
------END PUBLIC KEY-----
-`;
+-----END PUBLIC KEY-----`;
+
+const publicKey = process.env.RSA_PUBLIC_KEY ?? defaultPublicKey;
 
 async function encryptData(data: string): Promise<{
     encryptedData: string;
@@ -56,6 +56,12 @@ async function encryptData(data: string): Promise<{
             `Failed to encrypt data: ${error.message || "Unknown error"}`,
         );
     }
+}
+
+export async function encryptSecrets(
+    secrets: string,
+): Promise<{ encryptedData: string; encryptedAESKey: string }> {
+    return await encryptData(secrets);
 }
 
 export async function encryptDockerCredentials(
