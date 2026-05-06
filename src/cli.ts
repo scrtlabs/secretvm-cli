@@ -128,6 +128,18 @@ async function main() {
             "--eip8004-chain <chainName>",
             "Chain to use for EIP8004 registration (supported: base-mainnet)",
         )
+        .option(
+            "--enable_ita, --enable_intel_trust_authority",
+            "Enable Intel Trust Authority JWT endpoint (TDX platform only, default)",
+        )
+        .option(
+            "--disable_ita",
+            "Disable Intel Trust Authority JWT endpoint",
+        )
+        .option(
+            "--enable_poc, --enable_proof_of_cloud",
+            "Enable Proof of Cloud JWT endpoint",
+        )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });
