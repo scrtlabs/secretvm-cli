@@ -56,6 +56,9 @@ export interface VmInstance {
     docker_file?: string | null;
     secret_fs_persistent?: boolean;
     kmsProvider?: string;
+    itaJwtEnabled?: boolean;
+    pocJwtEnabled?: boolean;
+    platform?: string;
 }
 
 export interface Template {
@@ -153,6 +156,16 @@ export interface CreateVmCommandOptions {
     kms?: string;
     eip8004RegistrationJson?: string;
     eip8004Chain?: string;
+    enable_ita?: boolean;
+    enable_intel_trust_authority?: boolean;
+    enableIta?: boolean;
+    enableIntelTrustAuthority?: boolean;
+    enable_poc?: boolean;
+    enable_proof_of_cloud?: boolean;
+    enablePoc?: boolean;
+    enableProofOfCloud?: boolean;
+    disable_ita?: boolean;
+    disableIta?: boolean;
 }
 
 export interface EditVmCommandOptions {
@@ -163,6 +176,7 @@ export interface EditVmCommandOptions {
     dockerCredentials?: string;
     dockerRegistry?: string;
     kms?: string;
+
 }
 
 export interface VerifyQuoteCommandOptions {
