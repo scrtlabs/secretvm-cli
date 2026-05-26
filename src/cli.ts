@@ -166,6 +166,10 @@ async function main() {
             "-K, --kms <kmsType>",
             "KMS type for encrypting secrets/credentials (contract = Secret Network)",
         )
+        .option("--enable-ita-jwt", "Enable Intel Trust Authority JWT")
+        .option("--disable-ita-jwt", "Disable Intel Trust Authority JWT")
+        .option("--enable-poc-jwt", "Enable Proof of Cloud JWT")
+        .option("--disable-poc-jwt", "Disable Proof of Cloud JWT")
         .action(async (vmId: string, cmdOptions) => {
             await editVmCommand(
                 vmId,
