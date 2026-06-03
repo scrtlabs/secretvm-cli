@@ -580,43 +580,25 @@ export async function createVmCommand(
                 formData.append("inviteCode", inviteCode.trim());
             }
 
+            if (enableItaJwt) {
+                formData.append("enable_ita_jwt", "1");
+            }
+            if (enablePocJwt) {
+                formData.append("enable_poc_jwt", "1");
+            }
+
             if (!kms || kms === "contract") {
-                if (enableItaJwt || enablePocJwt || (secrets_plaintext && secrets_plaintext.trim() !== "")) {
-                    let currentSecrets = secrets_plaintext || "";
-                    const lines = currentSecrets.split('\n').filter(line => {
-                        const trimmed = line.trim();
-                        if (trimmed === '') return false;
-                        return !trimmed.startsWith('SECRETVM_ENABLE_ITA_JWT=') && !trimmed.startsWith('SECRETVM_ENABLE_POC_JWT=');
-                    });
-
-                    const jwtEnvPairs: string[] = [];
-                    // For create, we assume standard TDX unless explicitly setting platform (which isn't supported in create yet anyway)
-                    if (enableItaJwt) {
-                        jwtEnvPairs.push('SECRETVM_ENABLE_ITA_JWT=1');
-                    }
-                    if (enablePocJwt) {
-                        jwtEnvPairs.push('SECRETVM_ENABLE_POC_JWT=1');
-                    }
-
-                    const finalSecrets = [...lines, ...jwtEnvPairs].join('\n');
-                    
-                    if (finalSecrets.trim() !== "") {
-                        const secretsCipher = await encryptForKmsContract(
-                            finalSecrets.trim(),
-                            KMS_CONTRACT_PUBLIC_KEY,
-                        );
-                        formData.append("secrets_cipher", secretsCipher);
-                    } else if (secrets_plaintext && secrets_plaintext.trim() !== "") {
-                         // Edge case: They passed a file but we stripped everything.
-                        const secretsCipher = await encryptForKmsContract(
-                            " ",
-                            KMS_CONTRACT_PUBLIC_KEY,
-                        );
-                        formData.append("secrets_cipher", secretsCipher);
-                    }
+                if (secrets_plaintext && secrets_plaintext.trim() !== "") {
+                    const secretsCipher = await encryptForKmsContract(
+                        secrets_plaintext.trim(),
+                        KMS_CONTRACT_PUBLIC_KEY,
+                    );
+                    formData.append("secrets_cipher", secretsCipher);
                 }
-            } else if (secrets_plaintext && secrets_plaintext.trim() !== "") {
-                formData.append("secrets_plaintext", secrets_plaintext.trim());
+            } else {
+                if (secrets_plaintext && secrets_plaintext.trim() !== "") {
+                    formData.append("secrets_plaintext", secrets_plaintext.trim());
+                }
             }
 
             if (domain && domain.trim() !== "") {

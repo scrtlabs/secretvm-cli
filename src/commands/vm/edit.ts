@@ -231,6 +231,14 @@ export async function editVmCommand(
                 );
             }
 
+            let enableItaJwtValue: boolean | undefined = undefined;
+            if (cmdOptions.enableItaJwt !== undefined) enableItaJwtValue = true;
+            if (cmdOptions.disableItaJwt !== undefined) enableItaJwtValue = false;
+
+            let enablePocJwtValue: boolean | undefined = undefined;
+            if (cmdOptions.enablePocJwt !== undefined) enablePocJwtValue = true;
+            if (cmdOptions.disablePocJwt !== undefined) enablePocJwtValue = false;
+
             if (kms === "contract") {
                 // KMS path: encrypt secrets and docker credentials with SN contract key.
                 let secretsCipher: string | undefined;
@@ -273,6 +281,8 @@ export async function editVmCommand(
                         kms_docker_username: kmsDockerUsername,
                         kms_docker_cipher: kmsDockerCipher,
                         kms_docker_repository: kmsDockerRepository,
+                        ...(enableItaJwtValue !== undefined && { enable_ita_jwt: enableItaJwtValue }),
+                        ...(enablePocJwtValue !== undefined && { enable_poc_jwt: enablePocJwtValue }),
                     },
                 );
 
@@ -354,6 +364,8 @@ export async function editVmCommand(
                     secrets_key: secretsKey,
                     docker_credentials_encrypted: dockerCredentialsEncrypted,
                     docker_credentials_key: dockerCredentialsKey,
+                    ...(enableItaJwtValue !== undefined && { enable_ita_jwt: enableItaJwtValue }),
+                    ...(enablePocJwtValue !== undefined && { enable_poc_jwt: enablePocJwtValue }),
                 },
             );
 

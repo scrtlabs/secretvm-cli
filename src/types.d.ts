@@ -176,7 +176,10 @@ export interface EditVmCommandOptions {
     dockerCredentials?: string;
     dockerRegistry?: string;
     kms?: string;
-
+    enableItaJwt?: boolean;
+    disableItaJwt?: boolean;
+    enablePocJwt?: boolean;
+    disablePocJwt?: boolean;
 }
 
 export interface VerifyQuoteCommandOptions {
