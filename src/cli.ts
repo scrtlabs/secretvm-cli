@@ -140,6 +140,18 @@ async function main() {
             "--enable_poc, --enable_proof_of_cloud",
             "Enable Proof of Cloud JWT endpoint",
         )
+        .option(
+            "--cloud <provider>",
+            "Cloud provider: secret (default) or gcp",
+        )
+        .option(
+            "--gcp-credentials <path>",
+            "Path to GCP service account JSON file (enables BYO GCP mode)",
+        )
+        .option(
+            "--gcp-extra-ports <ports>",
+            "Extra ports to expose, comma-separated (BYO GCP only)",
+        )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });

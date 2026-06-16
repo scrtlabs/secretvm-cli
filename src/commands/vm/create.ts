@@ -46,6 +46,9 @@ export async function createVmCommand(
     let chain = cmdOptions.eip8004Chain;
     let enableItaJwt = cmdOptions.disable_ita ? false : (cmdOptions.enable_ita ?? cmdOptions.enable_intel_trust_authority ?? cmdOptions.enableIta ?? cmdOptions.enableIntelTrustAuthority ?? true);
     let enablePocJwt = cmdOptions.enable_poc || cmdOptions.enable_proof_of_cloud || cmdOptions.enablePoc || cmdOptions.enableProofOfCloud || false;
+    let cloud = cmdOptions.cloud;
+    let gcpCredentials = cmdOptions.gcpCredentials;
+    let gcpExtraPorts = cmdOptions.gcpExtraPorts;
 
     if (cmdOptions.env) {
         try {
@@ -561,6 +564,27 @@ export async function createVmCommand(
                         "Environment must be either 'dev' or 'prod'.",
                     );
                 }
+                if (cloud && !["secret", "gcp"].includes(cloud)) {
+                    throw new Error("Cloud must be either 'secret' or 'gcp'.");
+                }
+            }
+
+            // GCP-specific validation and setup
+            if (cloud === "gcp") {
+                if (platform === "sev") {
+                    throw new Error("GCP only supports Intel TDX (tdx) platform.");
+                }
+                platform = "tdx";
+
+                if (gcpCredentials) {
+                    // BYO GCP: validate VM type
+                    const byoAllowedTypes = ["large", "xlarge"];
+                    if (type && !byoAllowedTypes.includes(type.trim())) {
+                        throw new Error(
+                            `BYO GCP only supports VM types: ${byoAllowedTypes.join(", ")}. Got: ${type}`,
+                        );
+                    }
+                }
             }
 
             if (!environment) {
@@ -777,6 +801,42 @@ export async function createVmCommand(
             }
             if (enablePocJwt) {
                 formData.append("enable_poc_jwt", "1");
+            }
+
+            if (cloud === "gcp") {
+                formData.append("cloud", "google");
+
+                if (gcpCredentials) {
+                    const absoluteCredPath = path.resolve(gcpCredentials.trim());
+                    let gcpJson: string;
+                    try {
+                        gcpJson = fs.readFileSync(absoluteCredPath, "utf-8");
+                    } catch {
+                        throw new Error(
+                            `GCP credentials file "${gcpCredentials}" does not exist or is not readable.`,
+                        );
+                    }
+
+                    let parsed: any;
+                    try {
+                        parsed = JSON.parse(gcpJson);
+                    } catch {
+                        throw new Error("GCP credentials file is not valid JSON.");
+                    }
+
+                    if (!parsed.project_id || !parsed.client_email || !parsed.private_key) {
+                        throw new Error(
+                            "GCP credentials JSON must contain project_id, client_email, and private_key.",
+                        );
+                    }
+
+                    formData.append("gcp_service_account_json", gcpJson);
+                    formData.append("use_custom_gcp_credentials", "1");
+
+                    if (gcpExtraPorts && gcpExtraPorts.trim() !== "") {
+                        formData.append("gcp_extra_ports", gcpExtraPorts.trim());
+                    }
+                }
             }
 
             if (registrationJson) {

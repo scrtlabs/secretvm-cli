@@ -166,6 +166,9 @@ export interface CreateVmCommandOptions {
     enableProofOfCloud?: boolean;
     disable_ita?: boolean;
     disableIta?: boolean;
+    cloud?: string;
+    gcpCredentials?: string;
+    gcpExtraPorts?: string;
 }
 
 export interface EditVmCommandOptions {
