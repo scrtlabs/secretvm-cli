@@ -685,7 +685,6 @@ export async function createVmCommand(
                 dockerCompose.services.traefik = {
                     image: "traefik:v2.10",
                     command: [
-                        "--api.insecure=false",
                         "--providers.docker=true",
                         "--providers.docker.exposedbydefault=false",
                         "--entrypoints.web.address=:80",
@@ -701,14 +700,15 @@ export async function createVmCommand(
                     ],
                     networks: ["traefik"],
                     labels: {
-                        "traefik.enable": "true",
-                        "traefik.http.routers.traefik.entrypoints": "websecure",
-                        "traefik.http.routers.traefik.service": "api@internal",
-                        "traefik.http.routers.traefik.tls.certresolver":
-                            "myresolver",
-                        "traefik.http.routers.traefik.middlewares": "auth",
-                        "traefik.http.middlewares.auth.basicauth.users":
-                            "admin:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/",
+                        // Do NOT route the Traefik container itself. Traefik is a
+                        // pure reverse proxy here; it only needs to route the app
+                        // services below. If we defined a router for this container
+                        // without a `rule`, Traefik would fall back to its default
+                        // rule Host(`<container-name>`) (e.g. "traefik-docker-wd"),
+                        // and — because that router also had a certresolver — try to
+                        // obtain an ACME certificate for that single-label name, which
+                        // Let's Encrypt rejects ("Domain name needs at least one dot").
+                        "traefik.enable": "false",
                     },
                 };
 
