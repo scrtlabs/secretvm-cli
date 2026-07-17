@@ -14,6 +14,7 @@ import { API_ENDPOINTS, KMS_CONTRACT_PUBLIC_KEY } from "../../constants";
 import { AxiosInstance, AxiosResponse } from "axios";
 import { encryptDockerCredentials, encryptSecrets } from "../../services/encryption";
 import { encryptForKmsContract } from "../../services/kmsEncryption";
+import { composeHasTraefik, injectTraefikProxy } from "../../services/tlsProxy";
 
 /** Poll a background job until terminal status, then return the VM details. */
 async function waitForJobAndFetchVm(
@@ -207,23 +208,59 @@ export async function editVmCommand(
             const vmName = name || vmDetails.nameFromUser || vmDetails.name;
 
             // Resolve docker-compose: use provided file or fall back to current VM compose.
-            let dockerComposeBase64: string | undefined;
-            if (dockerComposePath && dockerComposePath.trim() !== "") {
-                const absolutePath = path.resolve(dockerComposePath.trim());
-                const content = fs.readFileSync(absolutePath).toString();
-                dockerComposeBase64 = Buffer.from(content).toString("base64");
+            const hasNewCompose =
+                !!dockerComposePath && dockerComposePath.trim() !== "";
+            let dockerComposeContent: string | undefined;
+            if (hasNewCompose) {
+                const absolutePath = path.resolve(dockerComposePath!.trim());
+                dockerComposeContent = fs
+                    .readFileSync(absolutePath)
+                    .toString();
             } else if (vmDetails.docker_file) {
                 // No new docker-compose provided — reuse the current one from the VM.
-                dockerComposeBase64 = Buffer.from(
-                    vmDetails.docker_file,
-                ).toString("base64");
+                dockerComposeContent = vmDetails.docker_file;
             }
 
-            if (!dockerComposeBase64) {
+            if (!dockerComposeContent) {
                 throw new Error(
                     "Missing required option: -d, --docker-compose (VM has no existing docker-compose to reuse)",
                 );
             }
+
+            // TLS handling. The Traefik reverse-proxy injection lives in `create`,
+            // so a plain `edit -d <compose>` on a TLS-enabled VM would silently
+            // strip Traefik and kill external routing on :443.
+            const currentHasTls = composeHasTraefik(vmDetails.docker_file || "");
+            const newHasTls = composeHasTraefik(dockerComposeContent);
+            if (cmdOptions.tls && !newHasTls) {
+                // Re-wrap in Traefik. Bake the VM's existing domain in directly
+                // (the VM domain is fixed at create time and the update path is
+                // not guaranteed to re-substitute $DOMAIN_NAME).
+                const tlsDomain =
+                    vmDetails.custom_domain || vmDetails.vmDomain || undefined;
+                dockerComposeContent = injectTraefikProxy(
+                    dockerComposeContent,
+                    tlsDomain ?? undefined,
+                );
+            } else if (
+                hasNewCompose &&
+                currentHasTls &&
+                !newHasTls &&
+                !cmdOptions.tls
+            ) {
+                // Non-blocking warning: proceeding is allowed, but the user is
+                // about to strip the Traefik reverse proxy from a TLS-enabled VM.
+                console.warn(
+                    "Warning: this VM was created with TLS enabled, but the " +
+                        "provided docker-compose has no Traefik reverse proxy. " +
+                        "Applying it will remove HTTPS and kill external routing " +
+                        "on :443. Re-run with -s/--tls to keep TLS.",
+                );
+            }
+
+            const dockerComposeBase64 = Buffer.from(
+                dockerComposeContent,
+            ).toString("base64");
 
             if (globalOptions.interactive) {
                 console.log(

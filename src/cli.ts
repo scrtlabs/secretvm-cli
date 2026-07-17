@@ -167,6 +167,10 @@ async function main() {
         .option("-e, --env <env>", "Path to your new env file")
         .option("-p, --persistence", "Enable filesystem persistence")
         .option(
+            "-s, --tls",
+            "Re-enable HTTPS/TLS: wrap the (new) compose in a Traefik reverse proxy using the VM's existing domain",
+        )
+        .option(
             "-l, --docker-credentials <dockerCredentials>",
             "Credentials for private docker registries (username:password)",
         )

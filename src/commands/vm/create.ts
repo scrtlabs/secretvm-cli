@@ -7,16 +7,15 @@ import {
     CreateVmApiResponse,
     GlobalOptions,
     CreateVmCommandOptions,
-    DockerCompose,
     Template,
 } from "../../types";
 import { handleCommandExecution, successResponse } from "../../utils";
 import Table from "cli-table3";
 import { API_ENDPOINTS, KMS_CONTRACT_PUBLIC_KEY } from "../../constants";
 import { AxiosResponse } from "axios";
-import yaml from "js-yaml";
 import { encryptDockerCredentials } from "../../services/encryption";
 import { encryptForKmsContract } from "../../services/kmsEncryption";
+import { injectTraefikProxy } from "../../services/tlsProxy";
 import { startSpinner } from "../../spinner";
 
 export async function createVmCommand(
@@ -669,80 +668,9 @@ export async function createVmCommand(
             }
 
             if (enableHttps) {
-                const dockerCompose = yaml.load(
+                dockerComposeContent = injectTraefikProxy(
                     dockerComposeContent!,
-                ) as DockerCompose;
-
-                // Create traefik network if it doesn't exist
-                if (!dockerCompose.networks) {
-                    dockerCompose.networks = {};
-                }
-                dockerCompose.networks.traefik = {
-                    driver: "bridge",
-                };
-
-                // Add Traefik service
-                dockerCompose.services.traefik = {
-                    image: "traefik:v2.10",
-                    command: [
-                        "--providers.docker=true",
-                        "--providers.docker.exposedbydefault=false",
-                        "--entrypoints.web.address=:80",
-                        "--entrypoints.websecure.address=:443",
-                        "--certificatesresolvers.myresolver.acme.tlschallenge=true",
-                        "--certificatesresolvers.myresolver.acme.email=admin@$DOMAIN_NAME",
-                        "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json",
-                    ],
-                    ports: ["80:80", "443:443"],
-                    volumes: [
-                        "/var/run/docker.sock:/var/run/docker.sock:ro",
-                        "./letsencrypt:/letsencrypt",
-                    ],
-                    networks: ["traefik"],
-                    labels: {
-                        // Do NOT route the Traefik container itself. Traefik is a
-                        // pure reverse proxy here; it only needs to route the app
-                        // services below. If we defined a router for this container
-                        // without a `rule`, Traefik would fall back to its default
-                        // rule Host(`<container-name>`) (e.g. "traefik-docker-wd"),
-                        // and — because that router also had a certresolver — try to
-                        // obtain an ACME certificate for that single-label name, which
-                        // Let's Encrypt rejects ("Domain name needs at least one dot").
-                        "traefik.enable": "false",
-                    },
-                };
-
-                // Add Traefik labels to all other services
-                Object.keys(dockerCompose.services).forEach((serviceName) => {
-                    if (serviceName !== "traefik") {
-                        const service = dockerCompose.services[serviceName];
-
-                        if (!service.networks) {
-                            service.networks = [];
-                        }
-                        if (!service.networks.includes("traefik")) {
-                            service.networks.push("traefik");
-                        }
-
-                        if (!service.labels) {
-                            service.labels = {};
-                        }
-
-                        service.labels = {
-                            ...service.labels,
-                            "traefik.enable": "true",
-                            [`traefik.http.routers.${serviceName}.rule`]: `Host(\`$DOMAIN_NAME\`)`,
-                            [`traefik.http.routers.${serviceName}.entrypoints`]:
-                                "websecure",
-                            [`traefik.http.routers.${serviceName}.tls.certresolver`]:
-                                "myresolver",
-                            [`traefik.http.services.${serviceName}.loadbalancer.server.port`]:
-                                "80",
-                        };
-                    }
-                });
-
-                dockerComposeContent = yaml.dump(dockerCompose);
+                );
             }
             // The server expects the file field to be named 'dockercompose'
             formData.append(

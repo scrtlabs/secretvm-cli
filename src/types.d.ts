@@ -47,6 +47,7 @@ export interface VmInstance {
     hostId: string;
     ip_address: string | null;
     vmDomain?: string | null;
+    custom_domain?: string | null;
     createdAt: string;
     updatedAt: string;
     status: string;
@@ -179,6 +180,7 @@ export interface EditVmCommandOptions {
     dockerCredentials?: string;
     dockerRegistry?: string;
     kms?: string;
+    tls?: boolean;
     enableItaJwt?: boolean;
     disableItaJwt?: boolean;
     enablePocJwt?: boolean;
