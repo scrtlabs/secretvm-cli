@@ -2,6 +2,10 @@
   "name": "secretvm-cli",
   "version": "0.9.1",
   "description": "SecretAI devportal cli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scrtlabs/secretvm-cli.git"
+  },
   "main": "dist/cli.js",
   "files": [
     "dist"
