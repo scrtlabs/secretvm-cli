@@ -25,15 +25,21 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 24, not 20: `npm@latest` is 12.x now and needs node >= 22, so the
+          # upgrade step below fails outright on 20 (EBADENGINE).
+          node-version: 24
           # No registry-url on purpose: it writes an .npmrc with a placeholder
           # _authToken, which forces (failing) token auth and blocks the OIDC
           # exchange. npm defaults to registry.npmjs.org and uses OIDC when no
           # credential is present.
 
       - name: Upgrade npm for OIDC trusted publishing
-        # The Node 20 runner ships npm 10.x; OIDC trusted publishing needs >= 11.5.1.
-        run: npm install -g npm@latest
+        # OIDC trusted publishing needs npm >= 11.5.1, and the runner's bundled
+        # npm is not guaranteed to be that. Pinned to the 11 line rather than
+        # `@latest`, so a new npm major dropping this runner's node breaks
+        # nothing here -- which is exactly how the first run of this workflow
+        # failed.
+        run: npm install -g "npm@^11.5.1"
 
       # Installs the exact tree in npm-shrinkwrap.json, and its `prepare` script
       # compiles dist/, which is the only thing `files` ships.
