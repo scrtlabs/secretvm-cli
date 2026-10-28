@@ -1,0 +1,69 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.9.1). Leave empty to publish the version already in package.json."
+        required: false
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    # OIDC trusted publishing: id-token mints a short-lived credential per run,
+    # so this repo needs no NPM_TOKEN secret. Mirrors scrtlabs/secretvm-verify.
+    # One-time setup on npmjs.com: add a trusted publisher for the secretvm-cli
+    # package pointing at repo scrtlabs/secretvm-cli, workflow publish.yml, no
+    # environment. Without it the publish step fails authentication.
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # No registry-url on purpose: it writes an .npmrc with a placeholder
+          # _authToken, which forces (failing) token auth and blocks the OIDC
+          # exchange. npm defaults to registry.npmjs.org and uses OIDC when no
+          # credential is present.
+
+      - name: Upgrade npm for OIDC trusted publishing
+        # The Node 20 runner ships npm 10.x; OIDC trusted publishing needs >= 11.5.1.
+        run: npm install -g npm@latest
+
+      # Installs the exact tree in npm-shrinkwrap.json, and its `prepare` script
+      # compiles dist/, which is the only thing `files` ships.
+      - run: npm ci
+
+      - name: Set version
+        # On a release the tag wins. On a manual run the input wins if given;
+        # with neither, publish whatever package.json already says.
+        run: |
+          VERSION="${{ github.event.release.tag_name || inputs.version }}"
+          VERSION="${VERSION#v}"
+          if [ -n "$VERSION" ]; then
+            npm version "$VERSION" --no-git-tag-version --allow-same-version
+          fi
+          node -p "'publishing ' + require('./package.json').name + '@' + require('./package.json').version"
+
+      - run: npm run build
+
+      - name: Smoke-test the binary
+        # A CLI that cannot start must not reach the registry. This also catches
+        # the class of bug that shipped in 0.9.0: `--version` hangs instead of
+        # exiting when a dependency leaves a socket open.
+        run: timeout 30s node dist/cli.js --version
+
+      - name: Publish to npm (OIDC trusted publishing)
+        # setup-node points NPM_CONFIG_USERCONFIG at a temp .npmrc carrying a
+        # stale `_auth`. Any credential makes npm skip the OIDC exchange and
+        # then fail ENEEDAUTH, so publish against a clean userconfig.
+        env:
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npmrc-clean
+        run: |
+          printf 'registry=https://registry.npmjs.org/\nprovenance=true\n' > "$NPM_CONFIG_USERCONFIG"
+          npm publish --access public
