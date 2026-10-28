@@ -1,6 +1,8 @@
 import axios, { AxiosInstance } from "axios";
 import { CookieJar } from "tough-cookie";
 import { wrapper } from "axios-cookiejar-support";
+import http from "http";
+import https from "https";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
@@ -8,6 +10,24 @@ import { GlobalOptions } from "../types";
 
 export const SERVER_BASE_URL =
     process.env.SERVER_BASE_URL || "https://secretai.scrtlabs.com";
+
+/**
+ * Agents that close the connection once the response is in.
+ *
+ * A one-shot CLI exits when its event loop drains, and a keep-alive socket left
+ * open keeps it alive instead. axios 1.21.0 stopped destroying that socket, so
+ * `vm create` printed its JSON and then hung forever -- fatal under
+ * `CREATE_JSON="$(timeout 300s secretvm-cli vm create ...)"`, where the command
+ * substitution waits for an EOF that only the process's death delivers, and the
+ * step dies at the timeout while the VM was created fine.
+ *
+ * Pinning axios (see package.json) fixes that one release; this makes the exit
+ * independent of whether any future release cleans up after itself. The CLI
+ * makes a handful of requests per run, so losing connection reuse costs nothing
+ * measurable.
+ */
+const httpAgent = new http.Agent({ keepAlive: false });
+const httpsAgent = new https.Agent({ keepAlive: false });
 
 const SESSION_DIR = path.join(os.homedir(), ".secretvm-cli");
 const SESSION_FILE = path.join(SESSION_DIR, "session.json");
@@ -94,6 +114,8 @@ export async function getApiClient(
             baseURL: SERVER_BASE_URL,
             withCredentials: true,
             headers,
+            httpAgent,
+            httpsAgent,
         }),
     );
 }
