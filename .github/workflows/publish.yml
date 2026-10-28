@@ -64,6 +64,29 @@ jobs:
         # exiting when a dependency leaves a socket open.
         run: timeout 30s node dist/cli.js --version
 
+      # Packed before publishing, and uploaded whatever happens next. Nobody
+      # here has an npmjs.com account, so the publish step below can fail on
+      # authentication alone -- and when it does, this artifact is still a
+      # working build that `npm install -g <tarball>` accepts. Without it a
+      # failed run leaves no way to get the fix to anyone.
+      - name: Pack the tarball
+        run: |
+          mkdir -p dist-pack
+          npm pack --pack-destination dist-pack
+          ls -l dist-pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: secretvm-cli-tarball
+          path: dist-pack/*.tgz
+          if-no-files-found: error
+
+      - name: Attach the tarball to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist-pack/*.tgz --clobber
+
       - name: Publish to npm (OIDC trusted publishing)
         # setup-node points NPM_CONFIG_USERCONFIG at a temp .npmrc carrying a
         # stale `_auth`. Any credential makes npm skip the OIDC exchange and

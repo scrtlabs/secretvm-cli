@@ -11,7 +11,7 @@
     "dist"
   ],
   "bin": {
-    "secretvm-cli": "./dist/cli.js"
+    "secretvm-cli": "dist/cli.js"
   },
   "scripts": {
     "start": "node dist/cli.js",
