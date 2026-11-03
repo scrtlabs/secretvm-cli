@@ -152,6 +152,18 @@ async function main() {
             "--gcp-extra-ports <ports>",
             "Extra ports to expose, comma-separated (BYO GCP only)",
         )
+        .option(
+            "--tls-ports <mappings>",
+            "TLS port mappings served by the VM, \"<tls port>:<target port>\" comma-separated (e.g. 443:8080)",
+        )
+        .option(
+            "--cloudflare-api-key <key>",
+            "Cloudflare API token for the custom domain (-m); the VM then launches without manual DNS setup",
+        )
+        .option(
+            "--ssh-key <path>",
+            "Path to an SSH public key to authorize on the VM",
+        )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });

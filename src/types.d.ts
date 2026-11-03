@@ -170,6 +170,9 @@ export interface CreateVmCommandOptions {
     cloud?: string;
     gcpCredentials?: string;
     gcpExtraPorts?: string;
+    tlsPorts?: string;
+    cloudflareApiKey?: string;
+    sshKey?: string;
 }
 
 export interface EditVmCommandOptions {

@@ -48,6 +48,26 @@ export async function createVmCommand(
     let cloud = cmdOptions.cloud;
     let gcpCredentials = cmdOptions.gcpCredentials;
     let gcpExtraPorts = cmdOptions.gcpExtraPorts;
+    let tlsPorts = cmdOptions.tlsPorts;
+    let cloudflareApiKey = cmdOptions.cloudflareApiKey;
+    let sshPublicKey: string | undefined;
+
+    if (cmdOptions.sshKey) {
+        try {
+            sshPublicKey = fs
+                .readFileSync(path.resolve(cmdOptions.sshKey), "utf-8")
+                .trim();
+        } catch (err) {
+            throw new Error(
+                `SSH public key file "${cmdOptions.sshKey}" does not exist or is not readable.`,
+            );
+        }
+        if (!sshPublicKey || sshPublicKey.includes("PRIVATE KEY")) {
+            throw new Error(
+                `"${cmdOptions.sshKey}" is not an SSH public key (pass the .pub file).`,
+            );
+        }
+    }
 
     if (cmdOptions.env) {
         try {
@@ -590,6 +610,26 @@ export async function createVmCommand(
                 environment = "prod";
             }
 
+            if (tlsPorts !== undefined) {
+                tlsPorts = normalizeTlsPorts(tlsPorts);
+                if (enableHttps) {
+                    throw new Error(
+                        "--tls-ports and -s/--tls are alternative ways to serve HTTPS; use one of them.",
+                    );
+                }
+            }
+            if (cloudflareApiKey !== undefined) {
+                cloudflareApiKey = cloudflareApiKey.trim();
+                if (!cloudflareApiKey) {
+                    throw new Error("--cloudflare-api-key is empty.");
+                }
+                if (!domain || domain.trim() === "") {
+                    throw new Error(
+                        "--cloudflare-api-key is only used with a custom domain (-m, --domain).",
+                    );
+                }
+            }
+
             const formData = new FormData();
 
             formData.append("name", name!.trim());
@@ -626,7 +666,20 @@ export async function createVmCommand(
 
             if (domain && domain.trim() !== "") {
                 formData.append("custom_domain", domain.trim());
-                formData.append("skip_launch", "1");
+                if (cloudflareApiKey) {
+                    // The VM creates its own DNS records, so it can launch right away.
+                    formData.append("cloudflareApiKey", cloudflareApiKey);
+                } else {
+                    formData.append("skip_launch", "1");
+                }
+            }
+
+            if (tlsPorts) {
+                formData.append("tls_ports", tlsPorts);
+            }
+
+            if (sshPublicKey) {
+                formData.append("ssh_public_key", sshPublicKey);
             }
 
             if (dockerCredentials && dockerCredentials.trim() != "") {
@@ -698,9 +751,8 @@ export async function createVmCommand(
             if (archive) {
                 const absoluteArchivePath = path.resolve(archive.trim());
                 const dockerFilesFilename = path.basename(absoluteArchivePath);
-                const dockerFilesContent = fs
-                    .readFileSync(absoluteArchivePath)
-                    .toString();
+                // Sent as raw bytes: decoding the tar as UTF-8 corrupts any binary content.
+                const dockerFilesContent = fs.readFileSync(absoluteArchivePath);
 
                 formData.append(
                     "dockerfiles",
@@ -880,4 +932,37 @@ export async function createVmCommand(
             }
         },
     );
+}
+
+/**
+ * Validates and normalizes --tls-ports ("443:8080,8443:9090") the same way the portal does:
+ * "<tls port>:<target port>" pairs, ports 1..65535, each TLS port at most once.
+ */
+function normalizeTlsPorts(raw: string): string {
+    const usage =
+        '--tls-ports must be comma-separated "<tls port>:<target port>" pairs with ports in range 1..65535, e.g. 443:8080';
+    const toPort = (value: string): number | null => {
+        if (!/^\d{1,5}$/.test(value)) return null;
+        const port = Number(value);
+        return port >= 1 && port <= 65535 ? port : null;
+    };
+    const trimmed = raw.trim();
+    if (!trimmed) throw new Error(usage);
+    const seen = new Set<number>();
+    const mappings: string[] = [];
+    for (const part of trimmed.split(",")) {
+        const pieces = part.trim().split(":");
+        const tlsPort = pieces.length === 2 ? toPort(pieces[0].trim()) : null;
+        const targetPort = pieces.length === 2 ? toPort(pieces[1].trim()) : null;
+        if (tlsPort === null || targetPort === null) throw new Error(usage);
+        if (seen.has(tlsPort)) {
+            throw new Error(`TLS port ${tlsPort} is mapped more than once`);
+        }
+        seen.add(tlsPort);
+        mappings.push(`${tlsPort}:${targetPort}`);
+    }
+    if (mappings.length > 32) {
+        throw new Error("At most 32 TLS port mappings are allowed");
+    }
+    return mappings.join(",");
 }
