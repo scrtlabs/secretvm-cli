@@ -1,3 +1,15 @@
+export interface PortMapEntry {
+    proto: string;
+    internal: number;
+    external: number;
+}
+
+export interface VmNetworkInfo {
+    public_ip?: string;
+    ip_addr?: string;
+    [key: string]: any;
+}
+
 export interface VmTypeInfo {
     id: string;
     type: string;
@@ -60,6 +72,10 @@ export interface VmInstance {
     itaJwtEnabled?: boolean;
     pocJwtEnabled?: boolean;
     platform?: string;
+    network_mode?: string;
+    public_ip?: string;
+    network?: VmNetworkInfo;
+    port_map?: PortMapEntry[];
 }
 
 export interface Template {
@@ -121,6 +137,10 @@ export interface VmDetailsApiResponse {
     network_bridge: string | null;
     network_is_tap: boolean | null;
     network_ports: any;
+    network_mode?: string;
+    public_ip?: string;
+    network?: VmNetworkInfo;
+    port_map?: PortMapEntry[];
     docker_file: string | null;
     vmType: VmTypeInfo;
     host: HostInfo;
@@ -173,6 +193,8 @@ export interface CreateVmCommandOptions {
     tlsPorts?: string;
     cloudflareApiKey?: string;
     sshKey?: string;
+    networkMode?: string;
+    ports?: string;
 }
 
 export interface EditVmCommandOptions {
