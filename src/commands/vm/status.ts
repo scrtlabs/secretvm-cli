@@ -75,6 +75,35 @@ export async function vmStatusCommand(
                     console.log(
                         `    Ports:        ${vm.network_ports ? JSON.stringify(vm.network_ports) : "N/A"}`,
                     );
+                    if (vm.network_mode) {
+                        console.log(
+                            `    Network Mode: ${vm.network_mode}`,
+                        );
+                    }
+                    if (vm.public_ip) {
+                        console.log(
+                            `    Public IP:    ${vm.public_ip}`,
+                        );
+                    }
+                    if (Array.isArray(vm.port_map) && vm.port_map.length > 0) {
+                        console.log("    Port Map:");
+                        for (const entry of vm.port_map) {
+                            if (
+                                !entry ||
+                                entry.internal === undefined ||
+                                entry.external === undefined
+                            ) {
+                                continue;
+                            }
+                            const proto = entry.proto || "tcp";
+                            const target = vm.public_ip
+                                ? `${vm.public_ip}:${entry.external}`
+                                : `${entry.external}`;
+                            console.log(
+                                `      ${entry.internal}/${proto} -> ${target}`,
+                            );
+                        }
+                    }
 
                     if (vm.docker_file && vm.docker_file.trim() !== "") {
                         console.log("\n  📄 --- Docker Config (Snippet) ---");
