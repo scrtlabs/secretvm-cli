@@ -164,6 +164,14 @@ async function main() {
             "--ssh-key <path>",
             "Path to an SSH public key to authorize on the VM",
         )
+        .option(
+            "--network-mode <mode>",
+            'VM network mode: "shared" (private IP behind the host\'s shared address) or "dedicated" (own public IP). Omit for the host default.',
+        )
+        .option(
+            "--ports <mappings>",
+            'Non-TLS ports to publish on the shared address (shared mode), comma-separated "port[/proto]" (proto tcp|udp, default tcp), e.g. "8545/tcp,30303/udp". The host assigns external ports (shown as port_map).',
+        )
         .action(async (cmdOptions) => {
             await createVmCommand(cmdOptions, program.opts() as GlobalOptions);
         });

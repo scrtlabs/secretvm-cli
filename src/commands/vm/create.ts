@@ -50,6 +50,8 @@ export async function createVmCommand(
     let gcpExtraPorts = cmdOptions.gcpExtraPorts;
     let tlsPorts = cmdOptions.tlsPorts;
     let cloudflareApiKey = cmdOptions.cloudflareApiKey;
+    let networkMode = cmdOptions.networkMode;
+    let ports = cmdOptions.ports;
     let sshPublicKey: string | undefined;
 
     if (cmdOptions.sshKey) {
@@ -630,6 +632,18 @@ export async function createVmCommand(
                 }
             }
 
+            if (networkMode !== undefined) {
+                networkMode = networkMode.trim().toLowerCase();
+                if (networkMode !== "shared" && networkMode !== "dedicated") {
+                    throw new Error(
+                        '--network-mode must be "shared" or "dedicated".',
+                    );
+                }
+            }
+            if (ports !== undefined) {
+                ports = normalizePorts(ports);
+            }
+
             const formData = new FormData();
 
             formData.append("name", name!.trim());
@@ -676,6 +690,14 @@ export async function createVmCommand(
 
             if (tlsPorts) {
                 formData.append("tls_ports", tlsPorts);
+            }
+
+            if (networkMode) {
+                formData.append("network_mode", networkMode);
+            }
+
+            if (ports) {
+                formData.append("ports", ports);
             }
 
             if (sshPublicKey) {
@@ -918,6 +940,36 @@ export async function createVmCommand(
                         data.data.createdAt,
                     ]);
                     console.log(table.toString());
+
+                    const networkMode = data.data.network_mode;
+                    const publicIp = data.data.public_ip ?? data.data.network?.public_ip;
+                    const portMap = data.data.port_map;
+                    if (networkMode) {
+                        console.log(`\n  Network Mode:   ${networkMode}`);
+                    }
+                    if (publicIp) {
+                        console.log(`  Public IP:      ${publicIp}`);
+                    }
+                    if (Array.isArray(portMap) && portMap.length > 0) {
+                        console.log("  Port Map:");
+                        for (const entry of portMap) {
+                            if (
+                                !entry ||
+                                entry.internal === undefined ||
+                                entry.external === undefined
+                            ) {
+                                continue;
+                            }
+                            const proto = entry.proto || "tcp";
+                            const target = publicIp
+                                ? `${publicIp}:${entry.external}`
+                                : `${entry.external}`;
+                            console.log(
+                                `    ${entry.internal}/${proto} -> ${target}`,
+                            );
+                        }
+                    }
+
                     console.log(
                         'You can check the VM status using the "vm list" command shortly.',
                     );
@@ -965,4 +1017,33 @@ function normalizeTlsPorts(raw: string): string {
         throw new Error("At most 32 TLS port mappings are allowed");
     }
     return mappings.join(",");
+}
+
+/**
+ * Validates and normalizes --ports ("8545/tcp,30303/udp,9000"):
+ * comma-separated "port[/proto]" entries, proto tcp|udp (bare port -> tcp),
+ * ports 1..65535, each entry at most once.
+ */
+function normalizePorts(raw: string): string {
+    const usage =
+        '--ports must be comma-separated "port[/proto]" entries (proto tcp|udp, default tcp) with ports in range 1..65535, e.g. 8545/tcp,30303/udp,9000';
+    const trimmed = raw.trim();
+    if (!trimmed) throw new Error(usage);
+    const seen = new Set<string>();
+    const entries: string[] = [];
+    for (const part of trimmed.split(",")) {
+        const entry = part.trim();
+        const match = entry.match(/^(\d{1,5})(\/(tcp|udp))?$/i);
+        if (!match) throw new Error(usage);
+        const port = Number(match[1]);
+        if (port < 1 || port > 65535) throw new Error(usage);
+        const proto = (match[3] || "tcp").toLowerCase();
+        const normalized = `${port}/${proto}`;
+        if (seen.has(normalized)) {
+            throw new Error(`Port ${normalized} is listed more than once`);
+        }
+        seen.add(normalized);
+        entries.push(normalized);
+    }
+    return entries.join(",");
 }
